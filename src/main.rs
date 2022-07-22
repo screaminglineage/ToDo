@@ -25,8 +25,8 @@ struct Cli {
     list: bool,
 
     /// Mark a task as complete
-    #[clap(long="mark-done", short='x', value_parser=check_marked, value_name="TASK NUMBER")]
-    mark: Option<u32>,
+    #[clap(long="mark-done", short='x', value_name="TASKS")]
+    mark: Option<String>,
 
     /// Remove all tasks
     #[clap(long, short, action, value_parser)]
@@ -56,9 +56,10 @@ fn main() {
     }
 
     // Marking specific task as done
-    if let Some(num) = cli.mark {
-        println!("Marking task {num} as done"); //testing code
-        if let Err(e) = todo::mark_as_done(num, FILENAME, SEPARATOR) {
+    if let Some(pattern) = cli.mark {
+        println!("Marking task {:?} as done", pattern); //testing code
+        let nums = todo::parse_pattern(pattern);
+        if let Err(e) = todo::mark_as_done(nums, FILENAME, SEPARATOR) {
             handle_error(e, "Error in Marking Task Done");
         }
     }
@@ -91,17 +92,19 @@ fn handle_error(error: io::Error, desc: &str) {
 
 
 
-fn check_marked(n: &str) -> Result<u32, String> {
-    let task_data = fs::read_to_string(FILENAME).expect("Failed to read file");
-    let count = task_data.lines().count();
+// fn check_marked(n: &str) -> Result<Vec<u32>, String> {
+//     let task_data = fs::read_to_string(FILENAME).expect("Failed to read file");
+//     let count = task_data.lines().count();
+//     let mut task_nums = Vec::new();
 
-    let num: usize = n
-        .parse()
-        .map_err(|_| format!("{n} is not a valid number"))?;
+//     let num: usize = n
+//         .parse()
+//         .map_err(|_| format!("{n} is not a valid number"))?;
 
-    if num <= count && num > 0 {
-        Ok(num as u32)
-    } else {
-        Err("Number out of range!".to_string())
-    }
-}
+//     if num <= count && num > 0 {
+//         task_nums.push(num as u32);
+//         Ok(task_nums)
+//     } else {
+//         Err("Number out of range!".to_string())
+//     }
+// }

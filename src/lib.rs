@@ -92,7 +92,7 @@ pub fn display_tasks(filepath: &str, separator: char) -> io::Result<()> {
     Ok(())
 }
 
-pub fn mark_as_done(num: u32, filepath: &str, separator: char) -> io::Result<()> {
+pub fn mark_as_done(task_nums: Vec<u32>, filepath: &str, separator: char) -> io::Result<()> {
     let task_data = fs::read_to_string(filepath)?;
     let mut temp_file = OpenOptions::new()
         .write(true)
@@ -101,7 +101,7 @@ pub fn mark_as_done(num: u32, filepath: &str, separator: char) -> io::Result<()>
 
     let mut i = 1;
     for line in task_data.lines() {
-        if i == num {
+        if task_nums.contains(&i) {
             let mut task = Task::from_string(line, separator);
             task.set_complete();
             task.write_to_file(&mut temp_file, separator)?;
@@ -123,6 +123,33 @@ pub fn remove_all(filepath: &str) -> io::Result<()>{
 }
 
 
+// Parses a pattern from "1-6,13,7-9" to [1,2,3,4,5,6,13,7,8,9]
+pub fn parse_pattern(pattern: String) -> Vec<u32> {
+    let mut nums = Vec::new();
+    for num in pattern.split(",") {
+        let mut n = num
+                .split("-")
+                .map(|s| s.parse::<u32>().expect("Invalid User Input"));
+        
+        let lower = match n.next() {
+            Some(num) => num,
+            None => panic!("FUUUUUCK") 
+        };
+        let upper = match n.next() {
+            Some(num) => num,
+            None => lower
+        };
+
+        // println!("n -> {lower} {upper}");
+        
+        for i in lower..upper+1 {
+            nums.push(i);
+        }
+    }
+    nums
+}
+
+
 
 
 #[cfg(test)]
@@ -138,4 +165,21 @@ mod tests {
             }
         );
     }
+
+    #[test]
+    fn pattern_parser() {
+        assert_eq!(
+            parse_pattern("1,5,7".into()),
+            [1,5,7]
+        );
+    }
+
+    #[test]
+    fn pattern_parser_2() {
+        assert_eq!(
+            parse_pattern("1-6,13,7-9".into()),
+            [1,2,3,4,5,6,13,7,8,9]
+        );
+    }
+
 }
