@@ -16,6 +16,7 @@ impl Task {
         }
     }
 
+    // Create Task from a string separated by a character
     fn from_string(task: &str, seperator: char) -> Task {
         let mut tasks = task.split(seperator);
         let description = match tasks.next() {
@@ -34,6 +35,7 @@ impl Task {
         }
     }
 
+    // Get a checkbox and the Task
     fn view(&self) -> String {
         let checkbox: &str;
         if self.is_complete {
@@ -48,6 +50,7 @@ impl Task {
         self.is_complete = true;
     }
 
+    // Write a Task to file 
     fn write_to_file(&self, file: &mut std::fs::File, separator: char) -> io::Result<()> {
         writeln!(
             file,
@@ -70,6 +73,7 @@ pub fn take_input(prompt: &str) -> String {
 }
 
 
+// Adds a new task to the list
 pub fn add_task(task_name: String, filepath: &str, separator: char) -> io::Result<()> {
     let mut file = OpenOptions::new()
         .append(true)
@@ -81,6 +85,8 @@ pub fn add_task(task_name: String, filepath: &str, separator: char) -> io::Resul
     Ok(())
 }
 
+
+// Displays a list of all tasks
 pub fn display_tasks(filepath: &str, separator: char) -> io::Result<()> {
     let tasks_data = fs::read_to_string(filepath)?;
 
@@ -94,6 +100,7 @@ pub fn display_tasks(filepath: &str, separator: char) -> io::Result<()> {
 }
 
 
+// Marks a task as done
 pub fn mark_as_done(task_nums: Vec<u32>, filepath: &str, separator: char) -> io::Result<()> {
     let task_data = fs::read_to_string(filepath)?;
     let mut temp_file = OpenOptions::new()
@@ -119,13 +126,14 @@ pub fn mark_as_done(task_nums: Vec<u32>, filepath: &str, separator: char) -> io:
 }
 
 
+// Deletes all tasks from list
 pub fn remove_all(filepath: &str) -> io::Result<()>{
     let _ = File::create(filepath)?;
     Ok(())
 }
 
 
-// Parses a pattern from "1-6,13,7-9" to [1,2,3,4,5,6,13,7,8,9]
+// Parses a user entered pattern like "1-6,13,7-9" into [1,2,3,4,5,6,13,7,8,9]
 pub fn parse_pattern(pattern: String) -> Vec<u32> {
     let mut tasks = Vec::new();
     for num in pattern.split(",") {
