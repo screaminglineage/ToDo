@@ -1,5 +1,6 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
+use std::process;
 
 #[derive(PartialEq, Debug)]
 struct Task {
@@ -92,6 +93,7 @@ pub fn display_tasks(filepath: &str, separator: char) -> io::Result<()> {
     Ok(())
 }
 
+
 pub fn mark_as_done(task_nums: Vec<u32>, filepath: &str, separator: char) -> io::Result<()> {
     let task_data = fs::read_to_string(filepath)?;
     let mut temp_file = OpenOptions::new()
@@ -125,28 +127,37 @@ pub fn remove_all(filepath: &str) -> io::Result<()>{
 
 // Parses a pattern from "1-6,13,7-9" to [1,2,3,4,5,6,13,7,8,9]
 pub fn parse_pattern(pattern: String) -> Vec<u32> {
-    let mut nums = Vec::new();
+    let mut tasks = Vec::new();
     for num in pattern.split(",") {
         let mut n = num
                 .split("-")
-                .map(|s| s.parse::<u32>().expect("Invalid User Input"));
+                .map(|s| str::parse::<u32>(s));
         
-        let lower = match n.next() {
-            Some(num) => num,
-            None => panic!("FUUUUUCK") 
-        };
-        let upper = match n.next() {
-            Some(num) => num,
-            None => lower
+        let lower: u32;
+        let upper: u32;
+
+        match n.next() {
+            Some(Ok(num)) => lower = num,
+            _ => {
+                eprintln!("Error in parsing arguments");
+                process::exit(1);
+            } 
         };
 
-        // println!("n -> {lower} {upper}");
-        
+        match n.next() {
+            Some(Ok(num)) => upper = num,
+            None => upper = lower,
+            Some(Err(_)) => {
+                eprintln!("Error in parsing arguments");
+                process::exit(1);
+            }
+        };
+        // println!("n -> {lower} {upper}"); // testing code
         for i in lower..upper+1 {
-            nums.push(i);
+            tasks.push(i);
         }
     }
-    nums
+    tasks
 }
 
 
@@ -167,7 +178,7 @@ mod tests {
     }
 
     #[test]
-    fn pattern_parser() {
+    fn pattern_parser_simple() {
         assert_eq!(
             parse_pattern("1,5,7".into()),
             [1,5,7]
@@ -175,10 +186,10 @@ mod tests {
     }
 
     #[test]
-    fn pattern_parser_2() {
+    fn pattern_parser_complex() {
         assert_eq!(
-            parse_pattern("1-6,13,7-9".into()),
-            [1,2,3,4,5,6,13,7,8,9]
+            parse_pattern("1-6,13-17,7-9,14".into()),
+            [1,2,3,4,5,6,13,14,15,16,17,7,8,9,14]
         );
     }
 
