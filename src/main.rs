@@ -36,27 +36,34 @@ struct Cli {
 fn main() {
     let cli = Cli::parse();
 
+    // Adding a task
     if let Some(task) = cli.task {
         println!("Adding - {task}"); // testing code
         if let Err(e) = todo::add_task(task, FILENAME, SEPARATOR) {
-            handle_error(e);
+            handle_error(e, "Error in Adding Task");
         };
     }
 
+    // Listing all saved tasks
     if cli.list {
         println!("Listing all tasks"); // testing code
         if let Err(e) = todo::display_tasks(FILENAME, SEPARATOR) {
-            handle_error(e);
+            if e.kind() == io::ErrorKind::NotFound {
+                eprintln!("No tasks to display!");
+                process::exit(1);
+            }
         }
     }
 
+    // Marking specific task as done
     if let Some(num) = cli.mark {
         println!("Marking task {num} as done"); //testing code
         if let Err(e) = todo::mark_as_done(num, FILENAME, SEPARATOR) {
-            handle_error(e);
+            handle_error(e, "Error in Marking Task Done");
         }
     }
 
+    // Removing all saved tasks
     if cli.remove {
         let choice = todo::take_input(
             "Do you want to remove all saved tasks (y/n): "
@@ -65,22 +72,20 @@ fn main() {
             "y" => {
                 println!("Removing all saved tasks"); 
                 if let Err(e) = todo::remove_all(FILENAME) {
-                    handle_error(e);
+                    handle_error(e, "Error in Deleting Tasks");
                 }
             },
             _ => {
                 println!("No tasks deleted"); 
                 process::exit(0);
             }
-
         }
-        
     }
 }
 
 
-fn handle_error(error: io::Error) {
-    eprintln!("Error in Marking Task Done - {error}");
+fn handle_error(error: io::Error, desc: &str) {
+    eprintln!("{desc} - {error}");
     process::exit(1);
 }
 
