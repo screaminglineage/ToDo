@@ -101,7 +101,7 @@ pub fn display_tasks(filepath: &str, separator: char) -> io::Result<()> {
 
 
 // Marks a task as done
-pub fn mark_as_done(task_nums: Vec<u32>, filepath: &str, separator: char) -> io::Result<()> {
+pub fn mark_as_done(mark_tasks: Vec<u32>, filepath: &str, separator: char) -> io::Result<()> {
     let task_data = fs::read_to_string(filepath)?;
     let mut temp_file = OpenOptions::new()
         .write(true)
@@ -110,7 +110,7 @@ pub fn mark_as_done(task_nums: Vec<u32>, filepath: &str, separator: char) -> io:
 
     let mut i = 1;
     for line in task_data.lines() {
-        if task_nums.contains(&i) {
+        if mark_tasks.contains(&i) {
             let mut task = Task::from_string(line, separator);
             task.set_complete();
             task.write_to_file(&mut temp_file, separator)?;
