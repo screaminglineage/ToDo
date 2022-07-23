@@ -46,12 +46,12 @@ impl Task {
             format!(
                 "{}{}{} {}",
                 "[".blue(),
-                "x".red(),
+                "x".red().bold(),
                 "]".blue(),
-                self.description.green()
+                self.description.green().bold()
             )
         } else {
-            format!("{} {}", "[ ]".blue(), self.description.yellow())
+            format!("{} {}", "[ ]".blue(), self.description.yellow().bold())
         }
     }
 
@@ -82,7 +82,7 @@ pub fn take_input(prompt: &str) -> String {
 }
 
 // Adds a new task to the list
-pub fn add_task(task_name: String, filepath: &str, separator: char) -> io::Result<()> {
+pub fn add_task(task_name: String, filepath: &String, separator: char) -> io::Result<()> {
     let mut file = OpenOptions::new()
         .append(true)
         .create(true)
@@ -94,7 +94,7 @@ pub fn add_task(task_name: String, filepath: &str, separator: char) -> io::Resul
 }
 
 // Displays a list of all tasks
-pub fn display_tasks(filepath: &str, separator: char) -> io::Result<()> {
+pub fn display_tasks(filepath: &String, separator: char) -> io::Result<()> {
     let tasks_data = fs::read_to_string(filepath)?;
 
     let mut i: i32 = 1;
@@ -107,8 +107,8 @@ pub fn display_tasks(filepath: &str, separator: char) -> io::Result<()> {
 }
 
 // Marks a task as done
-pub fn mark_as_done(mark_tasks: Vec<u32>, filepath: &str, separator: char) -> io::Result<()> {
-    let task_data = fs::read_to_string(filepath)?;
+pub fn mark_as_done(mark_tasks: Vec<u32>, filepath: &String, separator: char) -> io::Result<()> {
+    let task_data = fs::read_to_string(&filepath)?;
     let mut temp_file = OpenOptions::new()
         .write(true)
         .create(true)
@@ -125,14 +125,14 @@ pub fn mark_as_done(mark_tasks: Vec<u32>, filepath: &str, separator: char) -> io
         }
         i += 1
     }
-    fs::remove_file(filepath)?;
-    fs::rename("temp.txt", filepath)?;
+    fs::remove_file(&filepath)?;
+    fs::rename("temp.txt", &filepath)?;
 
     Ok(())
 }
 
 // Deletes all tasks from list
-pub fn remove_all(filepath: &str) -> io::Result<()> {
+pub fn remove_all(filepath: &String) -> io::Result<()> {
     fs::remove_file(filepath)?;
     Ok(())
 }
