@@ -1,5 +1,5 @@
 use colored::Colorize;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::process;
 
@@ -129,7 +129,7 @@ pub fn mark_as_done(mark_tasks: Vec<u32>, filepath: &str, separator: char) -> io
 
 // Deletes all tasks from list
 pub fn remove_all(filepath: &str) -> io::Result<()> {
-    let _ = File::create(filepath)?;
+    fs::remove_file(filepath)?;
     Ok(())
 }
 
