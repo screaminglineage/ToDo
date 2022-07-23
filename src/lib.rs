@@ -4,7 +4,8 @@ use std::io::{self, Write};
 use std::process;
 
 const PARSE_ERROR_MESSAGE: &str =
-    "Error in parsing arguments\nMake sure that they are in the form 1-5,8,10-12 (without spaces) if marking multiple options";
+    "Error in parsing arguments
+Make sure that they are in the form 1-5,8,10-12 (without spaces) if marking multiple options";
 
 #[derive(PartialEq, Debug)]
 struct Task {
