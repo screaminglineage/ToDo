@@ -1,6 +1,6 @@
 use clap::{ArgGroup, Parser};
-use std::process;
 use std::io;
+use std::process;
 
 use todo;
 
@@ -23,8 +23,10 @@ struct Cli {
     #[clap(long, short, action, value_parser)]
     list: bool,
 
-    /// Mark a task as complete
-    #[clap(long="mark-done", short='x', value_name="TASKS")]
+    /// Mark a task as complete.
+    /// A pattern like 1-5,8,10-12 (without spaces)
+    /// can also be used to mark multiple tasks
+    #[clap(long = "mark-done", short = 'x', value_name = "TASKS")]
     mark: Option<String>,
 
     /// Remove all tasks
@@ -37,7 +39,7 @@ fn main() {
 
     // Adding a task
     if let Some(task) = cli.task {
-        println!("Adding - {task}"); // testing code
+        println!("Task Added");
         if let Err(e) = todo::add_task(task, FILEPATH, SEPARATOR) {
             handle_io_error(e, "Error in Adding Task");
         };
@@ -50,47 +52,47 @@ fn main() {
 
     // Marking specific task as done
     if let Some(pattern) = cli.mark {
-        println!("Marking task {:?} as done", pattern); //testing code
         let nums = todo::parse_pattern(pattern);
         if let Err(e) = todo::mark_as_done(nums, FILEPATH, SEPARATOR) {
-            handle_io_error(e, "Error in Marking Task Done");
+            handle_not_found_error(e, "No Saved Tasks Found!", "Error in Marking Tasks");
         }
         list_tasks(FILEPATH, SEPARATOR);
     }
 
     // Removing all saved tasks
     if cli.remove {
-        let choice = todo::take_input(
-            "Do you want to remove all saved tasks (y/n): "
-        );
+        let choice = todo::take_input("Do you want to remove all saved tasks (y/n): ");
         match choice.to_lowercase().trim() {
             "y" => {
-                println!("Removing all saved tasks"); 
+                println!("All Saved Tasks Removed");
                 if let Err(e) = todo::remove_all(FILEPATH) {
                     handle_io_error(e, "Error in Deleting Tasks");
                 }
-            },
+            }
             _ => {
-                println!("No tasks deleted"); 
+                println!("Tasks Left Unchanged");
                 process::exit(0);
             }
         }
     }
 }
 
-
 fn handle_io_error(error: io::Error, desc: &str) {
     eprintln!("{desc} - {error}");
     process::exit(1);
 }
 
+fn handle_not_found_error(error: io::Error, desc_1: &str, desc_2: &str) {
+    if error.kind() == io::ErrorKind::NotFound {
+        eprintln!("{}", desc_1);
+        process::exit(1);
+    } else {
+        handle_io_error(error, desc_2);
+    }
+}
 
 fn list_tasks(filepath: &str, separator: char) {
-    println!("Listing all tasks"); // testing code
     if let Err(e) = todo::display_tasks(filepath, separator) {
-        if e.kind() == io::ErrorKind::NotFound {
-            eprintln!("No tasks to display!");
-            process::exit(1);
-        }
+        handle_not_found_error(e, "No Tasks to Display!", "Error in Displaying Tasks")
     }
 }

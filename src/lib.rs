@@ -3,6 +3,9 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::process;
 
+const PARSE_ERROR_MESSAGE: &str =
+    "Error in parsing arguments\nMake sure that they are in the form 1-5,8,10-12 (without spaces) if marking multiple options";
+
 #[derive(PartialEq, Debug)]
 struct Task {
     description: String,
@@ -145,7 +148,7 @@ pub fn parse_pattern(pattern: String) -> Vec<u32> {
         match n.next() {
             Some(Ok(num)) => lower = num,
             _ => {
-                eprintln!("Error in parsing arguments");
+                eprintln!("{}", PARSE_ERROR_MESSAGE);
                 process::exit(1);
             }
         };
@@ -154,11 +157,10 @@ pub fn parse_pattern(pattern: String) -> Vec<u32> {
             Some(Ok(num)) => upper = num,
             None => upper = lower,
             Some(Err(_)) => {
-                eprintln!("Error in parsing arguments");
+                eprintln!("{}", PARSE_ERROR_MESSAGE);
                 process::exit(1);
             }
         };
-        // println!("n -> {lower} {upper}"); // testing code
         for i in lower..upper + 1 {
             tasks.push(i);
         }
