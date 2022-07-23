@@ -141,7 +141,7 @@ pub fn remove_all(filepath: &String) -> io::Result<()> {
 pub fn parse_pattern(pattern: String) -> Vec<u32> {
     let mut tasks = Vec::new();
     for num in pattern.split(",") {
-        let mut n = num.split("-").map(|s| str::parse::<u32>(s));
+        let mut n = num.split("-").map(|s| s.parse::<u32>());
 
         let lower: u32;
         let upper: u32;
