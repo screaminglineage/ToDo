@@ -1,5 +1,7 @@
+use colored::Colorize;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
+use std::process;
 
 #[derive(PartialEq, Debug)]
 struct Task {
@@ -15,6 +17,7 @@ impl Task {
         }
     }
 
+    // Create Task from a string separated by a character
     fn from_string(task: &str, seperator: char) -> Task {
         let mut tasks = task.split(seperator);
         let description = match tasks.next() {
@@ -33,20 +36,26 @@ impl Task {
         }
     }
 
+    // Get a checkbox and the Task
     fn view(&self) -> String {
-        let checkbox: &str;
         if self.is_complete {
-            checkbox = "[x]"
+            format!(
+                "{}{}{} {}",
+                "[".blue(),
+                "x".red(),
+                "]".blue(),
+                self.description.green()
+            )
         } else {
-            checkbox = "[ ]"
+            format!("{} {}", "[ ]".blue(), self.description.yellow())
         }
-        format!("{} {}", checkbox, self.description)
     }
 
     fn set_complete(&mut self) {
         self.is_complete = true;
     }
 
+    // Write a Task to file
     fn write_to_file(&self, file: &mut std::fs::File, separator: char) -> io::Result<()> {
         writeln!(
             file,
@@ -57,18 +66,18 @@ impl Task {
     }
 }
 
-
-
 // Displays a prompt to the user and returns their input
 pub fn take_input(prompt: &str) -> String {
     let mut input = String::new();
     print!("{}", prompt);
     io::stdout().flush().expect("Failed to flush buffer");
-    io::stdin().read_line(&mut input).expect("Failed to read input");
+    io::stdin()
+        .read_line(&mut input)
+        .expect("Failed to read input");
     input
 }
 
-
+// Adds a new task to the list
 pub fn add_task(task_name: String, filepath: &str, separator: char) -> io::Result<()> {
     let mut file = OpenOptions::new()
         .append(true)
@@ -80,19 +89,21 @@ pub fn add_task(task_name: String, filepath: &str, separator: char) -> io::Resul
     Ok(())
 }
 
+// Displays a list of all tasks
 pub fn display_tasks(filepath: &str, separator: char) -> io::Result<()> {
     let tasks_data = fs::read_to_string(filepath)?;
 
-    let mut i = 1;
+    let mut i: i32 = 1;
     for line in tasks_data.lines() {
         let task = Task::from_string(line, separator);
-        println!("{i}. {}", task.view());
+        println!("{}. {}", i.to_string().blue(), task.view());
         i += 1;
     }
     Ok(())
 }
 
-pub fn mark_as_done(num: u32, filepath: &str, separator: char) -> io::Result<()> {
+// Marks a task as done
+pub fn mark_as_done(mark_tasks: Vec<u32>, filepath: &str, separator: char) -> io::Result<()> {
     let task_data = fs::read_to_string(filepath)?;
     let mut temp_file = OpenOptions::new()
         .write(true)
@@ -101,7 +112,7 @@ pub fn mark_as_done(num: u32, filepath: &str, separator: char) -> io::Result<()>
 
     let mut i = 1;
     for line in task_data.lines() {
-        if i == num {
+        if mark_tasks.contains(&i) {
             let mut task = Task::from_string(line, separator);
             task.set_complete();
             task.write_to_file(&mut temp_file, separator)?;
@@ -116,14 +127,44 @@ pub fn mark_as_done(num: u32, filepath: &str, separator: char) -> io::Result<()>
     Ok(())
 }
 
-
-pub fn remove_all(filepath: &str) -> io::Result<()>{
+// Deletes all tasks from list
+pub fn remove_all(filepath: &str) -> io::Result<()> {
     let _ = File::create(filepath)?;
     Ok(())
 }
 
+// Parses a user entered pattern like "1-6,13,7-9" into [1,2,3,4,5,6,13,7,8,9]
+pub fn parse_pattern(pattern: String) -> Vec<u32> {
+    let mut tasks = Vec::new();
+    for num in pattern.split(",") {
+        let mut n = num.split("-").map(|s| str::parse::<u32>(s));
 
+        let lower: u32;
+        let upper: u32;
 
+        match n.next() {
+            Some(Ok(num)) => lower = num,
+            _ => {
+                eprintln!("Error in parsing arguments");
+                process::exit(1);
+            }
+        };
+
+        match n.next() {
+            Some(Ok(num)) => upper = num,
+            None => upper = lower,
+            Some(Err(_)) => {
+                eprintln!("Error in parsing arguments");
+                process::exit(1);
+            }
+        };
+        // println!("n -> {lower} {upper}"); // testing code
+        for i in lower..upper + 1 {
+            tasks.push(i);
+        }
+    }
+    tasks
+}
 
 #[cfg(test)]
 mod tests {
@@ -136,6 +177,19 @@ mod tests {
                 description: "Theres another one".into(),
                 is_complete: false
             }
+        );
+    }
+
+    #[test]
+    fn pattern_parser_simple() {
+        assert_eq!(parse_pattern("1,5,7".into()), [1, 5, 7]);
+    }
+
+    #[test]
+    fn pattern_parser_complex() {
+        assert_eq!(
+            parse_pattern("1-6,13-17,7-9,14".into()),
+            [1, 2, 3, 4, 5, 6, 13, 14, 15, 16, 17, 7, 8, 9, 14]
         );
     }
 }
