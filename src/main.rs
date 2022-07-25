@@ -15,7 +15,7 @@ const SEPARATOR: char = '`';
 #[clap(group(
     ArgGroup::new("group")
         .required(true)
-        .args(&["task", "list", "mark", "remove"])
+        .args(&["task", "list", "mark", "delete", "remove"])
     ))]
 struct Cli {
     /// Add a new task
@@ -28,9 +28,15 @@ struct Cli {
 
     /// Mark a task as complete.
     /// A pattern like 1-5,8,10-12 (without spaces)
-    /// can also be used to mark multiple tasks
+    /// can also be used to mark multiple tasks at once
     #[clap(long = "mark-done", short = 'x', value_name = "TASKS")]
-    mark: Option<String>,
+    mark: Option<String>,    
+    
+    /// Delete a specific task.
+    /// A pattern like 1-5,8,10-12 (without spaces)
+    /// can also be used to delete multiple tasks at once
+    #[clap(long, short, value_name = "TASKS")]
+    delete: Option<String>,
 
     /// Remove all tasks
     #[clap(long, short, action, value_parser)]
@@ -61,10 +67,19 @@ fn main() {
         list_tasks(&filepath, SEPARATOR);
     }
 
-    // Marking specific task as done
+    // Marking specific tasks as done
     if let Some(pattern) = cli.mark {
         let nums = todo::parse_pattern(pattern);
         if let Err(e) = todo::mark_as_done(nums, &filepath, SEPARATOR) {
+            handle_not_found_error(e, "No Saved Tasks Found!", "Error in Marking Tasks");
+        }
+        list_tasks(&filepath, SEPARATOR);
+    }
+
+    // Deleting specific tasks
+    if let Some(pattern) = cli.delete {
+        let nums = todo::parse_pattern(pattern);
+        if let Err(e) = todo::delete_task(nums, &filepath) {
             handle_not_found_error(e, "No Saved Tasks Found!", "Error in Marking Tasks");
         }
         list_tasks(&filepath, SEPARATOR);
@@ -88,6 +103,8 @@ fn main() {
     }
 }
 
+
+
 fn handle_io_error(error: io::Error, desc: &str) {
     eprintln!("{desc} - {error}");
     process::exit(1);
@@ -107,7 +124,6 @@ fn list_tasks(filepath: &String, separator: char) {
         handle_not_found_error(e, "No Tasks to Display!", "Error in Displaying Tasks")
     }
 }
-
 
 fn get_filepath() -> Result<String, env::VarError> {
     let filepath = env::var(FILEPATH_ENV_VAR)?;
