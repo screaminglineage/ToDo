@@ -106,8 +106,17 @@ pub fn display_tasks(filepath: &String, separator: char) -> io::Result<()> {
     Ok(())
 }
 
+
+// Deletes a file and renames another temporary file to the former
+fn remove_and_rename(original: &String, temp_name: &str) -> io::Result<()> {
+    fs::remove_file(&original)?;
+    fs::rename(temp_name, &original)?;
+    Ok(())
+}
+
+
 // Marks a task as done
-pub fn mark_as_done(mark_tasks: Vec<u32>, filepath: &String, separator: char) -> io::Result<()> {
+pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &String, separator: char) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
     let mut temp_file = OpenOptions::new()
         .write(true)
@@ -116,7 +125,7 @@ pub fn mark_as_done(mark_tasks: Vec<u32>, filepath: &String, separator: char) ->
 
     let mut i = 1;
     for line in task_data.lines() {
-        if mark_tasks.contains(&i) {
+        if selected_tasks.contains(&i) {
             let mut task = Task::from_string(line, separator);
             task.set_complete();
             task.write_to_file(&mut temp_file, separator)?;
@@ -125,11 +134,31 @@ pub fn mark_as_done(mark_tasks: Vec<u32>, filepath: &String, separator: char) ->
         }
         i += 1
     }
-    fs::remove_file(&filepath)?;
-    fs::rename("temp.txt", &filepath)?;
-
+    remove_and_rename(&filepath, "temp.txt")?;
     Ok(())
 }
+
+
+// Deletes a specific task
+pub fn delete_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()> {
+    let task_data = fs::read_to_string(&filepath)?;
+    let mut temp_file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open("temp.txt")?;
+
+    let mut i = 1;
+    for line in task_data.lines() {
+        if !selected_tasks.contains(&i) {
+            writeln!(temp_file, "{line}")?;
+        }
+        i += 1
+    }
+    remove_and_rename(&filepath, "temp.txt")?;
+    Ok(())
+}
+
+
 
 // Deletes all tasks from list
 pub fn remove_all(filepath: &String) -> io::Result<()> {
