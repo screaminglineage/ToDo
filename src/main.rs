@@ -11,7 +11,8 @@ const SEPARATOR: char = '`';
 
 
 #[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
+#[clap(author, version, long_about = None)]
+#[clap(about = "Add tasks to a TODO list and then mark them done or remove when required")]
 #[clap(group(
     ArgGroup::new("group")
         .required(true)
