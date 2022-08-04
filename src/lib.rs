@@ -3,8 +3,7 @@ use std::fs::{self, OpenOptions};
 use std::io::{self, Write};
 use std::process;
 
-const PARSE_ERROR_MESSAGE: &str =
-    "Error in parsing arguments
+const PARSE_ERROR_MESSAGE: &str = "Error in parsing arguments
 Make sure that they are in the form 1-5,8,10-12 (without spaces) if marking multiple options";
 
 #[derive(PartialEq, Debug)]
@@ -106,7 +105,6 @@ pub fn display_tasks(filepath: &String, separator: char) -> io::Result<()> {
     Ok(())
 }
 
-
 // Deletes a file and renames another temporary file to the former
 fn remove_and_rename(original: &String, temp_name: &str) -> io::Result<()> {
     fs::remove_file(&original)?;
@@ -114,9 +112,12 @@ fn remove_and_rename(original: &String, temp_name: &str) -> io::Result<()> {
     Ok(())
 }
 
-
 // Marks a task as done
-pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &String, separator: char) -> io::Result<()> {
+pub fn mark_as_done(
+    selected_tasks: Vec<u32>,
+    filepath: &String,
+    separator: char,
+) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
     let mut temp_file = OpenOptions::new()
         .write(true)
@@ -138,9 +139,8 @@ pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &String, separator: char
     Ok(())
 }
 
-
 // Deletes a specific task
-pub fn delete_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()> {
+pub fn remove_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
     let mut temp_file = OpenOptions::new()
         .write(true)
@@ -157,8 +157,6 @@ pub fn delete_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()
     remove_and_rename(&filepath, "temp.txt")?;
     Ok(())
 }
-
-
 
 // Deletes all tasks from list
 pub fn remove_all(filepath: &String) -> io::Result<()> {
