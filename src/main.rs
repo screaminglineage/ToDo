@@ -1,7 +1,7 @@
 use clap::{ArgGroup, Parser};
+use std::env;
 use std::io;
 use std::process;
-use std::env;
 
 use todo;
 
@@ -9,38 +9,37 @@ const FILEPATH_ENV_VAR: &str = "RTODO_FILE_PATH";
 const DEFAULT_FILEPATH: &str = "tasks.txt";
 const SEPARATOR: char = '`';
 
-
 #[derive(Parser)]
-#[clap(author, version, about, long_about = None)]
+#[clap(author, version, long_about = None)]
+#[clap(about = "Add tasks to a TODO list and then mark them done or remove when required")]
 #[clap(group(
     ArgGroup::new("group")
-        .required(true)
-        .args(&["task", "list", "mark", "delete", "remove"])
+        .args(&["add", "list", "mark", "remove", "delete"])
     ))]
 struct Cli {
     /// Add a new task
-    #[clap(value_parser)]
-    task: Option<String>,
+    #[clap(long, short, value_parser)]
+    add: Option<String>,
 
-    /// List all tasks
-    #[clap(long, short, action, value_parser)]
-    list: bool,
+    /// Lists all tasks when no options are given
+    #[clap(value_name = "")]
+    list: Option<String>,
 
     /// Mark a task as complete.
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to mark multiple tasks at once
     #[clap(long = "mark-done", short = 'x', value_name = "TASKS")]
-    mark: Option<String>,    
-    
-    /// Delete a specific task.
-    /// A pattern like 1-5,8,10-12 (without spaces)
-    /// can also be used to delete multiple tasks at once
-    #[clap(long, short, value_name = "TASKS")]
-    delete: Option<String>,
+    mark: Option<String>,
 
-    /// Remove all tasks
+    /// Remove a specific task.
+    /// A pattern like 1-5,8,10-12 (without spaces)
+    /// can also be used to remove multiple tasks at once
+    #[clap(long, short, value_name = "TASKS")]
+    remove: Option<String>,
+
+    /// Delete all tasks
     #[clap(long, short, action, value_parser)]
-    remove: bool,
+    delete: bool,
 }
 
 fn main() {
@@ -55,16 +54,11 @@ fn main() {
     let cli = Cli::parse();
 
     // Adding a task
-    if let Some(task) = cli.task {
+    if let Some(task) = cli.add {
         println!("Task Added");
         if let Err(e) = todo::add_task(task, &filepath, SEPARATOR) {
             handle_io_error(e, "Error in Adding Task");
         };
-    }
-
-    // Listing all saved tasks
-    if cli.list {
-        list_tasks(&filepath, SEPARATOR);
     }
 
     // Marking specific tasks as done
@@ -73,37 +67,34 @@ fn main() {
         if let Err(e) = todo::mark_as_done(nums, &filepath, SEPARATOR) {
             handle_not_found_error(e, "No Saved Tasks Found!", "Error in Marking Tasks");
         }
-        list_tasks(&filepath, SEPARATOR);
     }
 
-    // Deleting specific tasks
-    if let Some(pattern) = cli.delete {
+    // Removing specific tasks
+    if let Some(pattern) = cli.remove {
         let nums = todo::parse_pattern(pattern);
-        if let Err(e) = todo::delete_task(nums, &filepath) {
+        if let Err(e) = todo::remove_task(nums, &filepath) {
             handle_not_found_error(e, "No Saved Tasks Found!", "Error in Marking Tasks");
         }
-        list_tasks(&filepath, SEPARATOR);
     }
 
-    // Removing all saved tasks
-    if cli.remove {
-        let choice = todo::take_input("Do you want to remove all saved tasks (y/N): ");
+    // Deleting all saved tasks
+    if cli.delete {
+        let choice = todo::take_input("Do you want to delete all saved tasks (y/N): ");
         match choice.to_lowercase().trim() {
             "y" => {
-                println!("All Saved Tasks Removed");
                 if let Err(e) = todo::remove_all(&filepath) {
-                    handle_io_error(e, "Error in Deleting Tasks");
+                    handle_not_found_error(e, "No Saved Tasks Found!", "Error in Deleting Tasks");
                 }
+                println!("All Saved Tasks Deleted");
             }
-            _ => {
-                println!("Tasks Left Unchanged");
-                process::exit(0);
-            }
+            _ => println!("Tasks Left Unchanged"),
         }
+        process::exit(0);
     }
+
+    // Listing all saved tasks
+    list_tasks(&filepath, SEPARATOR);
 }
-
-
 
 fn handle_io_error(error: io::Error, desc: &str) {
     eprintln!("{desc} - {error}");
