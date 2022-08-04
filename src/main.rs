@@ -15,17 +15,16 @@ const SEPARATOR: char = '`';
 #[clap(about = "Add tasks to a TODO list and then mark them done or remove when required")]
 #[clap(group(
     ArgGroup::new("group")
-        .required(true)
-        .args(&["task", "list", "mark", "delete", "remove"])
+        .args(&["add", "list", "mark", "delete", "remove"])
     ))]
 struct Cli {
     /// Add a new task
-    #[clap(value_parser)]
-    task: Option<String>,
+    #[clap(long, short, value_parser)]
+    add: Option<String>,
 
-    /// List all tasks
-    #[clap(long, short, action, value_parser)]
-    list: bool,
+    /// Lists all tasks when no arguments are given
+    #[clap(value_name = "")]
+    list: Option<String>,
 
     /// Mark a task as complete.
     /// A pattern like 1-5,8,10-12 (without spaces)
@@ -56,17 +55,13 @@ fn main() {
     let cli = Cli::parse();
 
     // Adding a task
-    if let Some(task) = cli.task {
+    if let Some(task) = cli.add {
         println!("Task Added");
         if let Err(e) = todo::add_task(task, &filepath, SEPARATOR) {
             handle_io_error(e, "Error in Adding Task");
         };
     }
 
-    // Listing all saved tasks
-    if cli.list {
-        list_tasks(&filepath, SEPARATOR);
-    }
 
     // Marking specific tasks as done
     if let Some(pattern) = cli.mark {
@@ -74,7 +69,6 @@ fn main() {
         if let Err(e) = todo::mark_as_done(nums, &filepath, SEPARATOR) {
             handle_not_found_error(e, "No Saved Tasks Found!", "Error in Marking Tasks");
         }
-        list_tasks(&filepath, SEPARATOR);
     }
 
     // Deleting specific tasks
@@ -83,7 +77,6 @@ fn main() {
         if let Err(e) = todo::delete_task(nums, &filepath) {
             handle_not_found_error(e, "No Saved Tasks Found!", "Error in Marking Tasks");
         }
-        list_tasks(&filepath, SEPARATOR);
     }
 
     // Removing all saved tasks
@@ -102,6 +95,9 @@ fn main() {
             }
         }
     }
+
+    // Listing all saved tasks
+    list_tasks(&filepath, SEPARATOR);
 }
 
 
