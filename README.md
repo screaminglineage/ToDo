@@ -10,7 +10,7 @@ A simple command line TODO utility
 ---
 
 ## Introduction
-ToDO is a simple CLI based TODO utility which lets you add tasks to a list, mark them done in bulk and remove them from the list entirely.
+ToDo is a simple CLI based TODO utility which lets you add tasks to a list, mark them done in bulk and remove them from the list entirely.
 
 ## Usage
 All the added tasks are listed out by default just by running the program without any options 
