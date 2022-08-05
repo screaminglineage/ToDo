@@ -37,7 +37,7 @@ OPTIONS:
 ```
 
 ### Options
- - `-a`, `--add` - Enter a new task to the list
+ - `-a`, `--add` - Add a new task to the list
  - `-x`, `--mark-done` - Mark specific tasks as done by specifying them separated by commas (A '**-**' can be used to denote ranges)
  - `-r`, `--remove` - Delete a specific tasks by specifying them (same pattern as for marking them as done)
  - `-d`, `--delete` - Delete all saved tasks
