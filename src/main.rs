@@ -22,7 +22,7 @@ struct Cli {
     add: Option<String>,
 
     /// Lists all tasks when no options are given
-    #[clap(value_name = "")]
+    #[clap(value_name = "...")]
     list: Option<String>,
 
     /// Mark a task as complete.
@@ -59,6 +59,7 @@ fn main() {
         if let Err(e) = todo::add_task(task, &filepath, SEPARATOR) {
             handle_io_error(e, "Error in Adding Task");
         };
+        process::exit(0);
     }
 
     // Marking specific tasks as done
