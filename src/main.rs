@@ -18,10 +18,15 @@ const SEPARATOR: char = '`';
     ))]
 struct Cli {
     /// Add new tasks separated by commas (without any spaces in between)
-    #[clap(long, short, value_parser, use_value_delimiter=true, value_delimiter=',')]
+    #[clap(
+        long,
+        short,
+        value_parser,
+        use_value_delimiter = true,
+        value_delimiter = ','
+    )]
     add: Option<Vec<String>>,
 
-   
     /// Mark a task as complete.
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to mark multiple tasks at once
@@ -34,11 +39,9 @@ struct Cli {
     #[clap(long, short, value_name = "TASKS")]
     remove: Option<String>,
 
-
     /// Remove all tasks marked as done
-    #[clap(long, short='R', action, value_parser)]
+    #[clap(long, short = 'R', action, value_parser)]
     remove_marked: bool,
-
 
     /// Delete all tasks
     #[clap(long, short, action, value_parser)]
@@ -55,7 +58,7 @@ fn main() {
     }
 
     let cli = Cli::parse();
-    
+
     //Adding a task
     if let Some(tasks) = cli.add {
         for task in tasks {
@@ -83,14 +86,14 @@ fn main() {
         }
     }
 
-
+    // Removing Marked Tasks
     if cli.remove_marked {
         if let Err(e) = todo::remove_marked(&filepath, SEPARATOR) {
             handle_not_found_error(e, "No Saved Tasks Found!", "Error in Removing Marked Tasks");
         }
+        println!("Marked Tasks Removed");
+        process::exit(0);
     }
-
-
 
     // Deleting all saved tasks
     if cli.delete {
@@ -111,11 +114,14 @@ fn main() {
     list_tasks(&filepath, SEPARATOR);
 }
 
+
+// Handles IO Error
 fn handle_io_error(error: io::Error, desc: &str) {
     eprintln!("{desc} - {error}");
     process::exit(1);
 }
 
+// Handles FileNotFound Error
 fn handle_not_found_error(error: io::Error, desc_1: &str, desc_2: &str) {
     if error.kind() == io::ErrorKind::NotFound {
         eprintln!("{}", desc_1);
@@ -125,12 +131,14 @@ fn handle_not_found_error(error: io::Error, desc_1: &str, desc_2: &str) {
     }
 }
 
+// Lists Tasks
 fn list_tasks(filepath: &String, separator: char) {
     if let Err(e) = todo::display_tasks(&filepath, separator) {
         handle_not_found_error(e, "No Tasks to Display!", "Error in Displaying Tasks")
     }
 }
 
+// Gets filepath from environment variable
 fn get_filepath() -> Result<String, env::VarError> {
     let filepath = env::var(FILEPATH_ENV_VAR)?;
     Ok(filepath)

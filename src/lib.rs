@@ -1,5 +1,5 @@
 use colored::Colorize;
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::process;
 
@@ -106,9 +106,9 @@ pub fn display_tasks(filepath: &String, separator: char) -> io::Result<()> {
 }
 
 // Deletes a file and renames another temporary file to the former
-fn remove_and_rename(original: &String, temp_name: &str) -> io::Result<()> {
+fn remove_and_rename(original: &String, temp_file: &str) -> io::Result<()> {
     fs::remove_file(&original)?;
-    fs::rename(temp_name, &original)?;
+    fs::rename(temp_file, &original)?;
     Ok(())
 }
 
@@ -139,14 +139,11 @@ pub fn mark_as_done(
     Ok(())
 }
 
-
-// Deletes a specific task
+// Removes a specific task
 pub fn remove_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
-    let mut temp_file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open("temp.txt")?;
+    let temp = "temp.txt";
+    let mut temp_file = File::create(temp)?;
 
     let mut i = 1;
     for line in task_data.lines() {
@@ -155,17 +152,15 @@ pub fn remove_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()
         }
         i += 1
     }
-    remove_and_rename(&filepath, "temp.txt")?;
+    remove_and_rename(&filepath, temp)?;
     Ok(())
 }
 
-
+// Removes all tasks marked as done
 pub fn remove_marked(filepath: &String, separator: char) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
-    let mut temp_file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open("temp.txt")?;
+    let temp = "temp.txt";
+    let mut temp_file = File::create(temp)?;
 
     for line in task_data.lines() {
         let task = Task::from_string(line, separator);
@@ -173,19 +168,15 @@ pub fn remove_marked(filepath: &String, separator: char) -> io::Result<()> {
             writeln!(temp_file, "{line}")?;
         }
     }
-    remove_and_rename(&filepath, "temp.txt")?;
+    remove_and_rename(&filepath, temp)?;
     Ok(())
 }
-
-
-
 
 // Deletes all tasks from list
 pub fn remove_all(filepath: &String) -> io::Result<()> {
     fs::remove_file(filepath)?;
     Ok(())
 }
-
 
 // Parses a user entered pattern like "1-6,13,7-9" into [1,2,3,4,5,6,13,7,8,9]
 pub fn parse_pattern(pattern: String) -> Vec<u32> {
