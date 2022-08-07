@@ -4,6 +4,8 @@ use std::io;
 use std::process;
 
 use todo;
+mod messages;
+use messages::{error, prompt};
 
 const FILEPATH_ENV_VAR: &str = "RTODO_FILE_PATH";
 const DEFAULT_FILEPATH: &str = "tasks.txt";
@@ -63,7 +65,7 @@ fn main() {
     if let Some(tasks) = cli.add {
         for task in tasks {
             if let Err(e) = todo::add_task(task, &filepath, SEPARATOR) {
-                handle_io_error(e, "Error in Adding Task");
+                handle_io_error(e, error::ADD_TASK_ERR);
             };
         }
         println!("Task(s) Added");
@@ -74,7 +76,7 @@ fn main() {
     if let Some(pattern) = cli.mark {
         let nums = todo::parse_pattern(pattern);
         if let Err(e) = todo::mark_as_done(nums, &filepath, SEPARATOR) {
-            handle_not_found_error(e, "No Saved Tasks Found!", "Error in Marking Tasks");
+            handle_not_found_error(e, error::NO_TASKS, error::MARK_TASK_ERR);
         }
     }
 
@@ -82,30 +84,30 @@ fn main() {
     if let Some(pattern) = cli.remove {
         let nums = todo::parse_pattern(pattern);
         if let Err(e) = todo::remove_task(nums, &filepath) {
-            handle_not_found_error(e, "No Saved Tasks Found!", "Error in Removing Tasks");
+            handle_not_found_error(e, error::NO_TASKS, error::REM_TASK_ERR);
         }
     }
 
     // Removing Marked Tasks
     if cli.remove_marked {
         if let Err(e) = todo::remove_marked(&filepath, SEPARATOR) {
-            handle_not_found_error(e, "No Saved Tasks Found!", "Error in Removing Marked Tasks");
+            handle_not_found_error(e, error::NO_TASKS, error::REM_MARK_TASK_ERR);
         }
-        println!("Marked Tasks Removed");
+        println!("{}", prompt::DEL_MARKED);
         process::exit(0);
     }
 
     // Deleting all saved tasks
     if cli.delete {
-        let choice = todo::take_input("Do you want to delete all saved tasks (y/N): ");
+        let choice = todo::take_input(prompt::DELETE_ALL);
         match choice.to_lowercase().trim() {
             "y" => {
                 if let Err(e) = todo::remove_all(&filepath) {
-                    handle_not_found_error(e, "No Saved Tasks Found!", "Error in Deleting Tasks");
+                    handle_not_found_error(e, error::NO_TASKS, error::DEL_TASK_ERR);
                 }
-                println!("All Saved Tasks Deleted");
+                println!("{}", prompt::DEL_ALL);
             }
-            _ => println!("Tasks Left Unchanged"),
+            _ => println!("{}", prompt::DEL_CANCEL),
         }
         process::exit(0);
     }
@@ -134,7 +136,7 @@ fn handle_not_found_error(error: io::Error, desc_1: &str, desc_2: &str) {
 // Lists Tasks
 fn list_tasks(filepath: &String, separator: char) {
     if let Err(e) = todo::display_tasks(&filepath, separator) {
-        handle_not_found_error(e, "No Tasks to Display!", "Error in Displaying Tasks")
+        handle_not_found_error(e, error::NO_TASKS_DISPL, error::LIST_TASK_ERR)
     }
 }
 

@@ -3,8 +3,9 @@ use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::process;
 
-const PARSE_ERROR_MESSAGE: &str = "Error in parsing arguments
-Make sure that they are in the form 1-5,8,10-12 (without spaces) if marking multiple options";
+
+mod messages;
+use messages::{error};
 
 #[derive(PartialEq, Debug)]
 struct Task {
@@ -25,12 +26,12 @@ impl Task {
         let mut tasks = task.split(seperator);
         let description = match tasks.next() {
             Some(n) => n.to_string(),
-            None => panic!("Failed to create Task struct: Couldnt parse name from string"),
+            None => panic!("{}", error::TASK_NAME_PARSE_ERR),
         };
         let is_complete = match tasks.next() {
             Some("true") => true,
             Some("false") => false,
-            _ => panic!("Failed to create Task struct: Couldnt parse is_complete from string"),
+            _ => panic!("{}", error::TASK_MARKED_PARSE_ERR),
         };
 
         Task {
@@ -69,6 +70,7 @@ impl Task {
     }
 }
 
+// TODO: Change this to return a result and handle both the error cases in main.rs
 // Displays a prompt to the user and returns their input
 pub fn take_input(prompt: &str) -> String {
     let mut input = String::new();
@@ -190,7 +192,7 @@ pub fn parse_pattern(pattern: String) -> Vec<u32> {
         match n.next() {
             Some(Ok(num)) => lower = num,
             _ => {
-                eprintln!("{}", PARSE_ERROR_MESSAGE);
+                eprintln!("{}", error::PATTERN_PARSE_ERR);
                 process::exit(1);
             }
         };
@@ -199,7 +201,7 @@ pub fn parse_pattern(pattern: String) -> Vec<u32> {
             Some(Ok(num)) => upper = num,
             None => upper = lower,
             Some(Err(_)) => {
-                eprintln!("{}", PARSE_ERROR_MESSAGE);
+                eprintln!("{}", error::PATTERN_PARSE_ERR);
                 process::exit(1);
             }
         };
