@@ -139,6 +139,7 @@ pub fn mark_as_done(
     Ok(())
 }
 
+
 // Deletes a specific task
 pub fn remove_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
@@ -157,6 +158,27 @@ pub fn remove_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()
     remove_and_rename(&filepath, "temp.txt")?;
     Ok(())
 }
+
+
+pub fn remove_marked(filepath: &String, separator: char) -> io::Result<()> {
+    let task_data = fs::read_to_string(&filepath)?;
+    let mut temp_file = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open("temp.txt")?;
+
+    for line in task_data.lines() {
+        let task = Task::from_string(line, separator);
+        if !task.is_complete {
+            writeln!(temp_file, "{line}")?;
+        }
+    }
+    remove_and_rename(&filepath, "temp.txt")?;
+    Ok(())
+}
+
+
+
 
 // Deletes all tasks from list
 pub fn remove_all(filepath: &String) -> io::Result<()> {

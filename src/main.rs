@@ -14,7 +14,7 @@ const SEPARATOR: char = '`';
 #[clap(about = "Add tasks to a TODO list and then mark them done or remove when required")]
 #[clap(group(
     ArgGroup::new("group")
-        .args(&["add", /*"list",*/ "mark", "remove", "delete"])
+        .args(&["add", "mark", "remove", "remove-marked", "delete"])
     ))]
 struct Cli {
     /// Add new tasks separated by commas (without any spaces in between)
@@ -34,6 +34,12 @@ struct Cli {
     #[clap(long, short, value_name = "TASKS")]
     remove: Option<String>,
 
+
+    /// Remove all tasks marked as done
+    #[clap(long, short='R', action, value_parser)]
+    remove_marked: bool,
+
+
     /// Delete all tasks
     #[clap(long, short, action, value_parser)]
     delete: bool,
@@ -42,8 +48,8 @@ struct Cli {
 fn main() {
     // Getting filepath from environment variable
     let filepath: String;
-    if let Ok(v) = get_filepath() {
-        filepath = v;
+    if let Ok(env_var) = get_filepath() {
+        filepath = env_var;
     } else {
         filepath = DEFAULT_FILEPATH.to_string();
     }
@@ -73,9 +79,18 @@ fn main() {
     if let Some(pattern) = cli.remove {
         let nums = todo::parse_pattern(pattern);
         if let Err(e) = todo::remove_task(nums, &filepath) {
-            handle_not_found_error(e, "No Saved Tasks Found!", "Error in Marking Tasks");
+            handle_not_found_error(e, "No Saved Tasks Found!", "Error in Removing Tasks");
         }
     }
+
+
+    if cli.remove_marked {
+        if let Err(e) = todo::remove_marked(&filepath, SEPARATOR) {
+            handle_not_found_error(e, "No Saved Tasks Found!", "Error in Removing Marked Tasks");
+        }
+    }
+
+
 
     // Deleting all saved tasks
     if cli.delete {
