@@ -16,7 +16,7 @@ ToDo is a simple CLI based TODO utility which lets you add tasks to a list, mark
 All the added tasks are listed out by default just by running the program without any options 
 
 ```
-todo 1.0.0
+todo 1.1.0
 Add tasks to a TODO list and then mark them done or remove when required
 
 USAGE:
