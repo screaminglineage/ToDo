@@ -52,7 +52,6 @@ fn main() {
     
     //Adding a task
     if let Some(tasks) = cli.add {
-        // println!("{:?}", tasks);     // Testing Code
         for task in tasks {
             if let Err(e) = todo::add_task(task, &filepath, SEPARATOR) {
                 handle_io_error(e, "Error in Adding Task");
