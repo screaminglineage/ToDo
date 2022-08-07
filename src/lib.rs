@@ -164,6 +164,7 @@ pub fn remove_all(filepath: &String) -> io::Result<()> {
     Ok(())
 }
 
+
 // Parses a user entered pattern like "1-6,13,7-9" into [1,2,3,4,5,6,13,7,8,9]
 pub fn parse_pattern(pattern: String) -> Vec<u32> {
     let mut tasks = Vec::new();

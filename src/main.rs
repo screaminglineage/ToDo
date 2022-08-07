@@ -14,17 +14,14 @@ const SEPARATOR: char = '`';
 #[clap(about = "Add tasks to a TODO list and then mark them done or remove when required")]
 #[clap(group(
     ArgGroup::new("group")
-        .args(&["add", "list", "mark", "remove", "delete"])
+        .args(&["add", /*"list",*/ "mark", "remove", "delete"])
     ))]
 struct Cli {
-    /// Add a new task
-    #[clap(long, short, value_parser)]
-    add: Option<String>,
+    /// Add new tasks separated by commas (without any spaces in between)
+    #[clap(long, short, value_parser, use_value_delimiter=true, value_delimiter=',')]
+    add: Option<Vec<String>>,
 
-    /// Lists all tasks when no options are given
-    #[clap(value_name = "...")]
-    list: Option<String>,
-
+   
     /// Mark a task as complete.
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to mark multiple tasks at once
@@ -52,13 +49,16 @@ fn main() {
     }
 
     let cli = Cli::parse();
-
-    // Adding a task
-    if let Some(task) = cli.add {
-        println!("Task Added");
-        if let Err(e) = todo::add_task(task, &filepath, SEPARATOR) {
-            handle_io_error(e, "Error in Adding Task");
-        };
+    
+    //Adding a task
+    if let Some(tasks) = cli.add {
+        // println!("{:?}", tasks);     // Testing Code
+        for task in tasks {
+            if let Err(e) = todo::add_task(task, &filepath, SEPARATOR) {
+                handle_io_error(e, "Error in Adding Task");
+            };
+        }
+        println!("Task(s) Added");
         process::exit(0);
     }
 
