@@ -1,10 +1,11 @@
 use colored::Colorize;
-use std::fs::{self, OpenOptions};
+use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::process;
 
-const PARSE_ERROR_MESSAGE: &str = "Error in parsing arguments
-Make sure that they are in the form 1-5,8,10-12 (without spaces) if marking multiple options";
+mod defaults;
+mod messages;
+use messages::error;
 
 #[derive(PartialEq, Debug)]
 struct Task {
@@ -21,16 +22,16 @@ impl Task {
     }
 
     // Create Task from a string separated by a character
-    fn from_string(task: &str, seperator: char) -> Task {
-        let mut tasks = task.split(seperator);
+    fn from_string(task: &str) -> Task {
+        let mut tasks = task.split(defaults::SEPARATOR);
         let description = match tasks.next() {
             Some(n) => n.to_string(),
-            None => panic!("Failed to create Task struct: Couldnt parse name from string"),
+            None => panic!("{}", error::TASK_NAME_PARSE_ERR),
         };
         let is_complete = match tasks.next() {
             Some("true") => true,
             Some("false") => false,
-            _ => panic!("Failed to create Task struct: Couldnt parse is_complete from string"),
+            _ => panic!("{}", error::TASK_MARKED_PARSE_ERR),
         };
 
         Task {
@@ -59,16 +60,19 @@ impl Task {
     }
 
     // Write a Task to file
-    fn write_to_file(&self, file: &mut std::fs::File, separator: char) -> io::Result<()> {
+    fn write_to_file(&self, file: &mut std::fs::File) -> io::Result<()> {
         writeln!(
             file,
             "{}{}{}",
-            self.description, separator, self.is_complete
+            self.description,
+            defaults::SEPARATOR,
+            self.is_complete
         )?;
         Ok(())
     }
 }
 
+// TODO: Change this to return a result and handle both the error cases in main.rs
 // Displays a prompt to the user and returns their input
 pub fn take_input(prompt: &str) -> String {
     let mut input = String::new();
@@ -81,24 +85,24 @@ pub fn take_input(prompt: &str) -> String {
 }
 
 // Adds a new task to the list
-pub fn add_task(task_name: String, filepath: &String, separator: char) -> io::Result<()> {
+pub fn add_task(task_name: String, filepath: &String) -> io::Result<()> {
     let mut file = OpenOptions::new()
         .append(true)
         .create(true)
         .open(filepath)?;
 
     let task = Task::new(task_name);
-    task.write_to_file(&mut file, separator)?;
+    task.write_to_file(&mut file)?;
     Ok(())
 }
 
 // Displays a list of all tasks
-pub fn display_tasks(filepath: &String, separator: char) -> io::Result<()> {
+pub fn display_tasks(filepath: &String) -> io::Result<()> {
     let tasks_data = fs::read_to_string(filepath)?;
 
     let mut i: i32 = 1;
     for line in tasks_data.lines() {
-        let task = Task::from_string(line, separator);
+        let task = Task::from_string(line);
         println!("{}. {}", i.to_string().blue(), task.view());
         i += 1;
     }
@@ -106,18 +110,14 @@ pub fn display_tasks(filepath: &String, separator: char) -> io::Result<()> {
 }
 
 // Deletes a file and renames another temporary file to the former
-fn remove_and_rename(original: &String, temp_name: &str) -> io::Result<()> {
+fn remove_and_rename(original: &String, temp_file: &str) -> io::Result<()> {
     fs::remove_file(&original)?;
-    fs::rename(temp_name, &original)?;
+    fs::rename(temp_file, &original)?;
     Ok(())
 }
 
 // Marks a task as done
-pub fn mark_as_done(
-    selected_tasks: Vec<u32>,
-    filepath: &String,
-    separator: char,
-) -> io::Result<()> {
+pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
     let mut temp_file = OpenOptions::new()
         .write(true)
@@ -127,9 +127,9 @@ pub fn mark_as_done(
     let mut i = 1;
     for line in task_data.lines() {
         if selected_tasks.contains(&i) {
-            let mut task = Task::from_string(line, separator);
+            let mut task = Task::from_string(line);
             task.set_complete();
-            task.write_to_file(&mut temp_file, separator)?;
+            task.write_to_file(&mut temp_file)?;
         } else {
             writeln!(temp_file, "{line}")?;
         }
@@ -139,13 +139,11 @@ pub fn mark_as_done(
     Ok(())
 }
 
-// Deletes a specific task
+// Removes a specific task
 pub fn remove_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
-    let mut temp_file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open("temp.txt")?;
+    let temp = "temp.txt";
+    let mut temp_file = File::create(temp)?;
 
     let mut i = 1;
     for line in task_data.lines() {
@@ -154,7 +152,23 @@ pub fn remove_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()
         }
         i += 1
     }
-    remove_and_rename(&filepath, "temp.txt")?;
+    remove_and_rename(&filepath, temp)?;
+    Ok(())
+}
+
+// Removes all tasks marked as done
+pub fn remove_marked(filepath: &String) -> io::Result<()> {
+    let task_data = fs::read_to_string(&filepath)?;
+    let temp = "temp.txt";
+    let mut temp_file = File::create(temp)?;
+
+    for line in task_data.lines() {
+        let task = Task::from_string(line);
+        if !task.is_complete {
+            writeln!(temp_file, "{line}")?;
+        }
+    }
+    remove_and_rename(&filepath, temp)?;
     Ok(())
 }
 
@@ -176,7 +190,7 @@ pub fn parse_pattern(pattern: String) -> Vec<u32> {
         match n.next() {
             Some(Ok(num)) => lower = num,
             _ => {
-                eprintln!("{}", PARSE_ERROR_MESSAGE);
+                eprintln!("{}", error::PATTERN_PARSE_ERR);
                 process::exit(1);
             }
         };
@@ -185,7 +199,7 @@ pub fn parse_pattern(pattern: String) -> Vec<u32> {
             Some(Ok(num)) => upper = num,
             None => upper = lower,
             Some(Err(_)) => {
-                eprintln!("{}", PARSE_ERROR_MESSAGE);
+                eprintln!("{}", error::PATTERN_PARSE_ERR);
                 process::exit(1);
             }
         };
@@ -202,7 +216,7 @@ mod tests {
     #[test]
     fn task_from_string() {
         assert_eq!(
-            Task::from_string("Theres another one`false".into(), '`'),
+            Task::from_string("Theres another one`false".into()),
             Task {
                 description: "Theres another one".into(),
                 is_complete: false
