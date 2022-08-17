@@ -1,6 +1,7 @@
 use clap::Parser;
 use std::env;
 use std::process;
+use std::path;
 
 mod cli_hndlr;
 mod defaults;
@@ -10,7 +11,7 @@ use messages::prompt;
 
 fn main() {
     // Getting filepath from environment variable
-    let filepath = get_filepath();
+    let (filepath, temp_path) = get_filepath();
     let cli = cli_hndlr::Cli::parse();
 
     //Adding a task
@@ -22,17 +23,17 @@ fn main() {
 
     // Marking specific tasks as done
     if let Some(pattern) = cli.mark {
-        cli_hndlr::mark_task_handler(pattern, &filepath);
+        cli_hndlr::mark_task_handler(pattern, &filepath, &temp_path);
     }
 
     // Removing specific tasks
     if let Some(pattern) = cli.remove {
-        cli_hndlr::remove_task_handler(pattern, &filepath);
+        cli_hndlr::remove_task_handler(pattern, &filepath, &temp_path);
     }
 
     // Removing all marked Tasks
     if cli.remove_marked {
-        cli_hndlr::remove_marked_handler(&filepath);
+        cli_hndlr::remove_marked_handler(&filepath, &temp_path);
         println!("{}", prompt::DEL_MARKED);
         process::exit(0);
     }
@@ -48,9 +49,16 @@ fn main() {
 }
 
 // Gets filepath from environment variable
-fn get_filepath() -> String {
+fn get_filepath() -> (String, String) {
     match env::var(defaults::FILEPATH_ENV_VAR) {
-        Ok(f) => f,
-        Err(_) => defaults::DEFAULT_TASKS_FILE.to_string(),
+        Ok(f) => {
+            let path = path::Path::new(&f).parent().unwrap().to_str().unwrap();
+            let temp_path = format!("{}/{}", path, defaults::DEFAULT_TEMP_FILE);
+            return (f, temp_path);
+        },
+        Err(_) => {
+            (defaults::DEFAULT_TASKS_FILE.to_string(), 
+            defaults::DEFAULT_TEMP_FILE.to_string())
+        }
     }
 }

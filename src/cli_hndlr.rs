@@ -18,6 +18,7 @@ pub struct Cli {
         long,
         short,
         value_parser,
+        value_name = "NEW-TASK(S)",
         use_value_delimiter = true,
         value_delimiter = ','
     )]
@@ -26,16 +27,16 @@ pub struct Cli {
     /// Mark a task as complete.
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to mark multiple tasks at once
-    #[clap(long = "mark-done", short = 'x', value_name = "TASKS")]
+    #[clap(long = "mark-done", short = 'x', value_name = "TASK(S)")]
     pub mark: Option<String>,
 
     /// Remove a specific task.
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to remove multiple tasks at once
-    #[clap(long, short, value_name = "TASKS")]
+    #[clap(long, short, value_name = "TASK(S)")]
     pub remove: Option<String>,
 
-    /// Remove all tasks marked as done
+    /// Remove all tasks which have been marked as complete
     #[clap(long, short = 'R', action, value_parser)]
     pub remove_marked: bool,
 
@@ -67,31 +68,31 @@ fn handle_not_found_error(error: io::Error, desc_1: &str, desc_2: &str) {
 // Adds task(s) and handles errors
 pub fn add_task_handler(tasks: Vec<String>, filepath: &String) {
     for task in tasks {
-        if let Err(e) = todo::add_task(task, &filepath) {
+        if let Err(e) = todo::add_task(task, filepath) {
             handle_io_error(e, error::ADD_TASK_ERR);
         };
     }
 }
 
 // Marks specific task(s) and handles errors
-pub fn mark_task_handler(pattern: String, filepath: &String) {
+pub fn mark_task_handler(pattern: String, filepath: &String, temp_path: &String) {
     let nums = todo::parse_pattern(pattern);
-    if let Err(e) = todo::mark_as_done(nums, &filepath) {
+    if let Err(e) = todo::mark_as_done(nums, filepath, temp_path) {
         handle_not_found_error(e, error::NO_TASKS, error::MARK_TASK_ERR);
     }
 }
 
 // Removes specific task(s) and handles errors
-pub fn remove_task_handler(pattern: String, filepath: &String) {
+pub fn remove_task_handler(pattern: String, filepath: &String, temp_path: &String) {
     let nums = todo::parse_pattern(pattern);
-    if let Err(e) = todo::remove_task(nums, &filepath) {
+    if let Err(e) = todo::remove_task(nums, filepath, temp_path) {
         handle_not_found_error(e, error::NO_TASKS, error::REM_TASK_ERR);
     }
 }
 
 // Removes all marked tasks and handles errors
-pub fn remove_marked_handler(filepath: &String) {
-    if let Err(e) = todo::remove_marked(&filepath) {
+pub fn remove_marked_handler(filepath: &String, temp_path: &String) {
+    if let Err(e) = todo::remove_marked(filepath, temp_path) {
         handle_not_found_error(e, error::NO_TASKS, error::REM_MARK_TASK_ERR);
     }
 }
@@ -101,7 +102,7 @@ pub fn delete_all_handler(filepath: &String) {
     let choice = todo::take_input(prompt::DELETE_ALL);
     match choice.to_lowercase().trim() {
         "y" => {
-            if let Err(e) = todo::remove_all(&filepath) {
+            if let Err(e) = todo::remove_all(filepath) {
                 handle_not_found_error(e, error::NO_TASKS, error::DEL_TASK_ERR);
             }
             println!("{}", prompt::DEL_ALL);
@@ -112,7 +113,7 @@ pub fn delete_all_handler(filepath: &String) {
 
 // Lists all tasks and handles errors
 pub fn list_task_handler(filepath: &String) {
-    if let Err(e) = todo::display_tasks(&filepath) {
+    if let Err(e) = todo::display_tasks(filepath) {
         handle_not_found_error(e, error::NO_TASKS_DISPL, error::LIST_TASK_ERR)
     }
 }
