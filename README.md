@@ -20,21 +20,21 @@ The task data is saved in a file called **todo_tasks.txt** (in the current worki
 All the added tasks are listed out by default just by running the program without any options 
 
 ```
-todo 1.1.0
+todo 1.2.0
 Add tasks to a TODO list and then mark them done or remove when required
 
 USAGE:
     todo [OPTIONS] [...]
  
 OPTIONS:
-    -a, --add <NEW-TASKS>      Add new tasks separated by commas (without any spaces in between)
+    -a, --add <NEW-TASK(S)>    Add new tasks separated by commas (without any spaces in between)
     -d, --delete               Delete all tasks
     -h, --help                 Print help information
-    -r, --remove <TASKS>       Remove a specific task. A pattern like 1-5,8,10-12 (without spaces)
+    -r, --remove <TASK(S)>     Remove a specific task. A pattern like 1-5,8,10-12 (without spaces)
                                can also be used to remove multiple tasks at once
     -R, --remove-marked        Remove all tasks marked as done
     -V, --version              Print version information
-    -x, --mark-done <TASKS>    Mark a task as complete. A pattern like 1-5,8,10-12 (without spaces)
+    -x, --mark-done <TASK(S)>  Mark a task as complete. A pattern like 1-5,8,10-12 (without spaces)
                                can also be used to mark multiple tasks at once
 ```
 
