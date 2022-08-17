@@ -1,23 +1,46 @@
 use clap::Parser;
 use std::env;
+use std::path::{Path, PathBuf};
 use std::process;
-use std::path;
 
 mod cli_hndlr;
 mod defaults;
 mod messages;
 
-use messages::prompt;
+use messages::{error, prompt};
+
+struct Files {
+    tasks_path: PathBuf,
+    temp_path: PathBuf,
+}
+
+impl Files {
+    fn new(tasks_path: PathBuf, temp_path: PathBuf) -> Files {
+        Files {
+            tasks_path,
+            temp_path,
+        }
+    }
+}
 
 fn main() {
+    let filepath: PathBuf;
+    let temp_path: PathBuf;
     // Getting filepath from environment variable
-    let (filepath, temp_path) = get_filepath();
+    if let Some(files) = get_filepath() {
+        filepath = files.tasks_path;
+        temp_path = files.temp_path;
+    } else {
+        eprintln!("{}", error::ENV_VAR_ERR);
+        process::exit(1);
+    }
+
     let cli = cli_hndlr::Cli::parse();
 
     //Adding a task
     if let Some(tasks) = cli.add {
         cli_hndlr::add_task_handler(tasks, &filepath);
-        println!("Task(s) Added");
+        println!("{}", prompt::TASK_ADDED);
         process::exit(0);
     }
 
@@ -48,17 +71,20 @@ fn main() {
     cli_hndlr::list_task_handler(&filepath);
 }
 
-// Gets filepath from environment variable
-fn get_filepath() -> (String, String) {
+// Tries to gets filepaths from environment variable and converts them to Path
+fn get_filepath() -> Option<Files> {
     match env::var(defaults::FILEPATH_ENV_VAR) {
         Ok(f) => {
-            let path = path::Path::new(&f).parent().unwrap().to_str().unwrap();
-            let temp_path = format!("{}/{}", path, defaults::DEFAULT_TEMP_FILE);
-            return (f, temp_path);
-        },
+            let tasks_path = Path::new(&f);
+            let mut temp_path = tasks_path.parent()?.to_owned();
+            temp_path.push(defaults::DEFAULT_TEMP_FILE);
+            return Some(Files::new(tasks_path.to_owned(), temp_path));
+        }
         Err(_) => {
-            (defaults::DEFAULT_TASKS_FILE.to_string(), 
-            defaults::DEFAULT_TEMP_FILE.to_string())
+            let tasks_path = Path::new(defaults::DEFAULT_TASKS_FILE);
+            let temp_path = Path::new(defaults::DEFAULT_TEMP_FILE);
+            let files = Files::new(tasks_path.to_owned(), temp_path.to_owned());
+            Some(files)
         }
     }
 }
