@@ -17,9 +17,12 @@ Make sure that they are in the form 1-5,8,10-12 (without spaces) if marking mult
     pub const REM_MARK_TASK_ERR: &'static str = "Error in Removing Marked Tasks";
     pub const DEL_TASK_ERR: &'static str = "Error in Deleting Tasks";
     pub const LIST_TASK_ERR: &'static str = "Error in Displaying Tasks";
+    pub const ENV_VAR_ERR: &'static str = "Couldnt Get Tasks Filepath from Environment Variable.
+Make sure it's set to an actual file.";
 }
 
 pub mod prompt {
+    pub const TASK_ADDED: &'static str = "Task(s) Added";
     pub const DELETE_ALL: &'static str = "Do you want to delete all saved tasks (y/N): ";
     pub const DEL_MARKED: &'static str = "Marked Tasks Removed";
     pub const DEL_ALL: &'static str = "All Saved Tasks Deleted";

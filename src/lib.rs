@@ -1,6 +1,7 @@
 use colored::Colorize;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
+use std::path::Path;
 use std::process;
 
 mod defaults;
@@ -85,7 +86,7 @@ pub fn take_input(prompt: &str) -> String {
 }
 
 // Adds a new task to the list
-pub fn add_task(task_name: String, filepath: &String) -> io::Result<()> {
+pub fn add_task(task_name: String, filepath: &Path) -> io::Result<()> {
     let mut file = OpenOptions::new()
         .append(true)
         .create(true)
@@ -97,7 +98,7 @@ pub fn add_task(task_name: String, filepath: &String) -> io::Result<()> {
 }
 
 // Displays a list of all tasks
-pub fn display_tasks(filepath: &String) -> io::Result<()> {
+pub fn display_tasks(filepath: &Path) -> io::Result<()> {
     let tasks_data = fs::read_to_string(filepath)?;
 
     let mut i: i32 = 1;
@@ -110,19 +111,19 @@ pub fn display_tasks(filepath: &String) -> io::Result<()> {
 }
 
 // Deletes a file and renames another temporary file to the former
-fn remove_and_rename(original: &String, temp_file: &str) -> io::Result<()> {
+fn remove_and_rename(original: &Path, temp_file: &Path) -> io::Result<()> {
     fs::remove_file(&original)?;
     fs::rename(temp_file, &original)?;
     Ok(())
 }
 
 // Marks a task as done
-pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()> {
+pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
     let mut temp_file = OpenOptions::new()
         .write(true)
         .create(true)
-        .open("temp.txt")?;
+        .open(temp_path)?;
 
     let mut i = 1;
     for line in task_data.lines() {
@@ -135,15 +136,14 @@ pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<(
         }
         i += 1
     }
-    remove_and_rename(&filepath, "temp.txt")?;
+    remove_and_rename(&filepath, temp_path)?;
     Ok(())
 }
 
 // Removes a specific task
-pub fn remove_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()> {
+pub fn remove_task(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
-    let temp = "temp.txt";
-    let mut temp_file = File::create(temp)?;
+    let mut temp_file = File::create(temp_path)?;
 
     let mut i = 1;
     for line in task_data.lines() {
@@ -152,15 +152,14 @@ pub fn remove_task(selected_tasks: Vec<u32>, filepath: &String) -> io::Result<()
         }
         i += 1
     }
-    remove_and_rename(&filepath, temp)?;
+    remove_and_rename(&filepath, temp_path)?;
     Ok(())
 }
 
 // Removes all tasks marked as done
-pub fn remove_marked(filepath: &String) -> io::Result<()> {
+pub fn remove_marked(filepath: &Path, temp_path: &Path) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
-    let temp = "temp.txt";
-    let mut temp_file = File::create(temp)?;
+    let mut temp_file = File::create(temp_path)?;
 
     for line in task_data.lines() {
         let task = Task::from_string(line);
@@ -168,12 +167,12 @@ pub fn remove_marked(filepath: &String) -> io::Result<()> {
             writeln!(temp_file, "{line}")?;
         }
     }
-    remove_and_rename(&filepath, temp)?;
+    remove_and_rename(&filepath, temp_path)?;
     Ok(())
 }
 
 // Deletes all tasks from list
-pub fn remove_all(filepath: &String) -> io::Result<()> {
+pub fn remove_all(filepath: &Path) -> io::Result<()> {
     fs::remove_file(filepath)?;
     Ok(())
 }
