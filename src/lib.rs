@@ -1,5 +1,4 @@
 use colored::Colorize;
-use std::collections::HashMap;
 use std::fmt;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
@@ -49,18 +48,6 @@ impl Task {
         Ok(contents.lines().map(|l| Task::from_string(l)).collect())
     }
 
-    // Create a task from a given filepath and return a hashmap 
-    // with the task number as keys and the task as values
-    pub fn from_file_numbered(filepath: &Path) -> io::Result<HashMap<u32, Task>> {
-        let contents = fs::read_to_string(filepath)?;
-        let mut nmbrd_tasks = HashMap::new();
-
-        for (i, task) in contents.lines().enumerate() {
-            nmbrd_tasks.insert((i+1) as u32, Task::from_string(task));
-        }
-        Ok(nmbrd_tasks)
-    }
-
     fn set_complete(&mut self) {
         self.is_complete = true;
     }
@@ -94,6 +81,7 @@ impl fmt::Display for Task {
         }
     }
 }
+
 
 // TODO: Change this to return a result and handle both the error cases in main.rs
 // Displays a prompt to the user and returns their input
