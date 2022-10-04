@@ -1,6 +1,6 @@
 // Handles the CLI parser, calls the required functions and also handles any errors
 
-use clap::{ArgGroup, Parser};
+use clap::{ArgGroup, Parser, Subcommand};
 use std::io;
 use std::path::Path;
 use std::process;
@@ -46,6 +46,18 @@ pub struct Cli {
     /// Delete all tasks
     #[clap(long, short, action, value_parser)]
     pub delete: bool,
+    /// Subcommand
+    #[clap(subcommand)]
+    pub command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+pub enum Commands {
+    /// Launches ToDo in TUI mode
+    Tui {
+        #[clap(action)]
+        tui: Option<bool>,
+    },
 }
 
 // Handling Errors
@@ -57,12 +69,12 @@ fn handle_io_error(error: io::Error, desc: &str) {
 }
 
 // Handles FileNotFound Error
-fn handle_not_found_error(error: io::Error, desc_1: &str, desc_2: &str) {
+pub fn handle_not_found_error(error: io::Error, cause_desc: &str, result_desc: &str) {
     if error.kind() == io::ErrorKind::NotFound {
-        eprintln!("{}", desc_1);
+        eprintln!("{}", cause_desc);
         process::exit(1);
     } else {
-        handle_io_error(error, desc_2);
+        handle_io_error(error, result_desc);
     }
 }
 

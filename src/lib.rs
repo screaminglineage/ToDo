@@ -1,4 +1,5 @@
 use colored::Colorize;
+use std::fmt;
 use std::fs::{self, File, OpenOptions};
 use std::io::{self, Write};
 use std::path::Path;
@@ -9,7 +10,7 @@ mod messages;
 use messages::error;
 
 #[derive(PartialEq, Debug)]
-struct Task {
+pub struct Task {
     description: String,
     is_complete: bool,
 }
@@ -23,16 +24,16 @@ impl Task {
     }
 
     // Create Task from a string separated by a character
-    fn from_string(task: &str) -> Task {
+    pub fn from_string(task: &str) -> Task {
         let mut tasks = task.split(defaults::SEPARATOR);
         let description = match tasks.next() {
             Some(n) => n.to_string(),
-            None => panic!("{}", error::TASK_NAME_PARSE_ERR),
+            None => panic!("{}", error::TASK_PARSE_ERR_NAME),
         };
         let is_complete = match tasks.next() {
             Some("true") => true,
             Some("false") => false,
-            _ => panic!("{}", error::TASK_MARKED_PARSE_ERR),
+            _ => panic!("{}", error::TASK_PARSE_ERR_CMPL),
         };
 
         Task {
@@ -41,23 +42,18 @@ impl Task {
         }
     }
 
-    // Get a checkbox and the Task
-    fn view(&self) -> String {
-        if self.is_complete {
-            format!(
-                "{}{}{} {}",
-                "[".blue(),
-                "x".red().bold(),
-                "]".blue(),
-                self.description.green().bold()
-            )
-        } else {
-            format!("{} {}", "[ ]".blue(), self.description.yellow().bold())
-        }
+    // Create a Task from a given filepath
+    pub fn from_file(filepath: &Path) -> io::Result<Vec<Task>> {
+        let contents = fs::read_to_string(filepath)?;
+        Ok(contents.lines().map(|l| Task::from_string(l)).collect())
     }
 
     fn set_complete(&mut self) {
         self.is_complete = true;
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.is_complete
     }
 
     // Write a Task to file
@@ -70,6 +66,19 @@ impl Task {
             self.is_complete
         )?;
         Ok(())
+    }
+}
+
+// Displays the Task along with a checkbox to denote
+// if it is complete or not. The colour of the Task is also
+// set depending on whether it is complete or not.
+impl fmt::Display for Task {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_complete {
+            write!(f, "{}", self.description.green().bold())
+        } else {
+            write!(f, "{}", self.description.yellow().bold())
+        }
     }
 }
 
@@ -101,11 +110,16 @@ pub fn add_task(task_name: String, filepath: &Path) -> io::Result<()> {
 pub fn display_tasks(filepath: &Path) -> io::Result<()> {
     let tasks_data = fs::read_to_string(filepath)?;
 
-    let mut i: i32 = 1;
-    for line in tasks_data.lines() {
+    for (i, line) in tasks_data.lines().enumerate() {
         let task = Task::from_string(line);
-        println!("{}. {}", i.to_string().blue(), task.view());
-        i += 1;
+        print!("{}. ", (i + 1).to_string().blue());
+
+        if task.is_complete() {
+            print!("{}{}{} ", "[".blue(), "x".red().bold(), "]".blue(),);
+        } else {
+            print!("{} ", "[ ]".blue());
+        }
+        println!("{}", task);
     }
     Ok(())
 }
@@ -136,7 +150,7 @@ pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path)
         }
         i += 1
     }
-    remove_and_rename(&filepath, temp_path)?;
+    remove_and_rename(filepath, temp_path)?;
     Ok(())
 }
 
@@ -152,7 +166,7 @@ pub fn remove_task(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) 
         }
         i += 1
     }
-    remove_and_rename(&filepath, temp_path)?;
+    remove_and_rename(filepath, temp_path)?;
     Ok(())
 }
 
@@ -167,7 +181,7 @@ pub fn remove_marked(filepath: &Path, temp_path: &Path) -> io::Result<()> {
             writeln!(temp_file, "{line}")?;
         }
     }
-    remove_and_rename(&filepath, temp_path)?;
+    remove_and_rename(filepath, temp_path)?;
     Ok(())
 }
 
@@ -214,12 +228,10 @@ mod tests {
     use super::*;
     #[test]
     fn task_from_string() {
+        let task = Task::from_string("Theres another one`false".into());
         assert_eq!(
-            Task::from_string("Theres another one`false".into()),
-            Task {
-                description: "Theres another one".into(),
-                is_complete: false
-            }
+            format!("{}", task),
+            format!("{} {}", "[ ]".blue(), task.description.yellow().bold())
         );
     }
 

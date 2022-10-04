@@ -4,10 +4,12 @@ pub mod error {
     pub const PATTERN_PARSE_ERR: &'static str = "Error in parsing arguments
 Make sure that they are in the form 1-5,8,10-12 (without spaces) if marking multiple options";
 
-    pub const TASK_NAME_PARSE_ERR: &'static str =
+    pub const TASK_PARSE_ERR_NAME: &'static str =
         "Failed to create struct 'Task' from string: Couldnt parse name from string";
-    pub const TASK_MARKED_PARSE_ERR: &'static str =
+    pub const TASK_PARSE_ERR_CMPL: &'static str =
         "Failed to create struct 'Task' from string: Couldnt parse is_complete from string";
+    pub const TASK_PARSE_ERR_FILE: &'static str =
+        "Error in Creating Task from File. Failed to Open File";
 
     pub const NO_TASKS: &'static str = "No Saved Tasks Found!";
     pub const NO_TASKS_DISPL: &'static str = "No Tasks to Display!";
