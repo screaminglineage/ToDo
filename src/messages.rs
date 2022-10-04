@@ -25,6 +25,7 @@ Make sure it's set to an actual file.";
 
 pub mod prompt {
     pub const TASK_ADDED: &'static str = "Task(s) Added";
+    pub const TASK_MARKED: &'static str = "Task(s) Marked as Done";
     pub const DELETE_ALL: &'static str = "Do you want to delete all saved tasks (y/N): ";
     pub const DEL_MARKED: &'static str = "Marked Tasks Removed";
     pub const DEL_ALL: &'static str = "All Saved Tasks Deleted";

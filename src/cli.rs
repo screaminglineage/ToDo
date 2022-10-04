@@ -63,7 +63,7 @@ pub enum Commands {
 // Handling Errors
 
 // Handles IO Error
-fn handle_io_error(error: io::Error, desc: &str) {
+pub fn handle_io_error(error: io::Error, desc: &str) {
     eprintln!("{desc} - {error}");
     process::exit(1);
 }
@@ -92,7 +92,7 @@ pub fn add_task_handler(tasks: Vec<String>, filepath: &Path) {
 // Marks specific task(s) and handles errors
 pub fn mark_task_handler(pattern: String, filepath: &Path, temp_path: &Path) {
     let nums = todo::parse_pattern(pattern);
-    if let Err(e) = todo::mark_as_done(nums, filepath, temp_path) {
+    if let Err(e) = todo::mark_done(nums, filepath, temp_path) {
         handle_not_found_error(e, error::NO_TASKS, error::MARK_TASK_ERR);
     }
 }
@@ -100,7 +100,7 @@ pub fn mark_task_handler(pattern: String, filepath: &Path, temp_path: &Path) {
 // Removes specific task(s) and handles errors
 pub fn remove_task_handler(pattern: String, filepath: &Path, temp_path: &Path) {
     let nums = todo::parse_pattern(pattern);
-    if let Err(e) = todo::remove_task(nums, filepath, temp_path) {
+    if let Err(e) = todo::remove_tasks(nums, filepath, temp_path) {
         handle_not_found_error(e, error::NO_TASKS, error::REM_TASK_ERR);
     }
 }

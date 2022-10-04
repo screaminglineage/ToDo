@@ -38,40 +38,42 @@ fn main() {
 
     let cli = cli::Cli::parse();
 
-    // Checking for Subcommands and
-    // listing all saved tasks if none found
-    match cli.command {
-        Some(_) => tui::tui(&filepath),
-        None => cli::list_task_handler(&filepath),
-    }
-
     // Adding a task
     if let Some(tasks) = cli.add {
         cli::add_task_handler(tasks, &filepath);
         println!("{}", prompt::TASK_ADDED);
+        return ();
     }
 
     // Marking specific tasks as done
     if let Some(pattern) = cli.mark {
         cli::mark_task_handler(pattern, &filepath, &temp_path);
-        cli::list_task_handler(&filepath);
     }
 
     // Removing specific tasks
     if let Some(pattern) = cli.remove {
         cli::remove_task_handler(pattern, &filepath, &temp_path);
-        cli::list_task_handler(&filepath);
     }
 
     // Removing all marked Tasks
     if cli.remove_marked {
         cli::remove_marked_handler(&filepath, &temp_path);
         println!("{}", prompt::DEL_MARKED);
+        return ();
     }
 
     // Deleting all saved tasks
     if cli.delete {
         cli::delete_all_handler(&filepath);
+        return ();
+    }
+
+    // Checking for Subcommands and
+    // listing all saved tasks if none found
+    if let Some(cli::Commands::Tui { .. }) = cli.command {
+        tui::tui(&filepath);
+    } else {
+        cli::list_task_handler(&filepath);
     }
 }
 

@@ -1,6 +1,6 @@
 use colored::Colorize;
 use std::fmt;
-use std::fs::{self, File, OpenOptions};
+use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::Path;
 use std::process;
@@ -9,7 +9,7 @@ mod defaults;
 mod messages;
 use messages::error;
 
-#[derive(PartialEq, Debug)]
+#[derive(PartialEq, Debug, Clone)]
 pub struct Task {
     description: String,
     is_complete: bool,
@@ -42,13 +42,7 @@ impl Task {
         }
     }
 
-    // Create a Task from a given filepath
-    pub fn from_file(filepath: &Path) -> io::Result<Vec<Task>> {
-        let contents = fs::read_to_string(filepath)?;
-        Ok(contents.lines().map(|l| Task::from_string(l)).collect())
-    }
-
-    fn set_complete(&mut self) {
+    pub fn mark_complete(&mut self) {
         self.is_complete = true;
     }
 
@@ -57,7 +51,7 @@ impl Task {
     }
 
     // Write a Task to file
-    fn write_to_file(&self, file: &mut std::fs::File) -> io::Result<()> {
+    pub fn write_to_file(&self, file: &mut File) -> io::Result<()> {
         writeln!(
             file,
             "{}{}{}",
@@ -82,7 +76,6 @@ impl fmt::Display for Task {
     }
 }
 
-
 // TODO: Change this to return a result and handle both the error cases in main.rs
 // Displays a prompt to the user and returns their input
 pub fn take_input(prompt: &str) -> String {
@@ -95,12 +88,15 @@ pub fn take_input(prompt: &str) -> String {
     input
 }
 
+// Gets all Tasks from a given filepath
+pub fn get_tasks(filepath: &Path) -> io::Result<Vec<Task>> {
+    let contents = fs::read_to_string(filepath)?;
+    Ok(contents.lines().map(|l| Task::from_string(l)).collect())
+}
+
 // Adds a new task to the list
 pub fn add_task(task_name: String, filepath: &Path) -> io::Result<()> {
-    let mut file = OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(filepath)?;
+    let mut file = File::options().append(true).create(true).open(filepath)?;
 
     let task = Task::new(task_name);
     task.write_to_file(&mut file)?;
@@ -110,6 +106,11 @@ pub fn add_task(task_name: String, filepath: &Path) -> io::Result<()> {
 // Displays a list of all tasks
 pub fn display_tasks(filepath: &Path) -> io::Result<()> {
     let tasks_data = fs::read_to_string(filepath)?;
+
+    if tasks_data.len() == 0 {
+        eprintln!("{}", error::NO_TASKS_DISPL);
+        return Ok(());
+    }
 
     for (i, line) in tasks_data.lines().enumerate() {
         let task = Task::from_string(line);
@@ -133,18 +134,15 @@ fn remove_and_rename(original: &Path, temp_file: &Path) -> io::Result<()> {
 }
 
 // Marks a task as done
-pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
+pub fn mark_done(sel_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
-    let mut temp_file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(temp_path)?;
+    let mut temp_file = File::options().write(true).create(true).open(temp_path)?;
 
     let mut i = 1;
     for line in task_data.lines() {
-        if selected_tasks.contains(&i) {
+        if sel_tasks.contains(&i) {
             let mut task = Task::from_string(line);
-            task.set_complete();
+            task.mark_complete();
             task.write_to_file(&mut temp_file)?;
         } else {
             writeln!(temp_file, "{line}")?;
@@ -155,8 +153,8 @@ pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path)
     Ok(())
 }
 
-// Removes a specific task
-pub fn remove_task(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
+// Removes specific tasks
+pub fn remove_tasks(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
     let mut temp_file = File::create(temp_path)?;
 
