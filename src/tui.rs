@@ -26,9 +26,6 @@ pub fn tui(filepath: &Path) {
         let menu = Select::new("Menu", items)
             .prompt_skippable();
         
-        let option = ListOption::new(0, "Add Task");
-
-
         match menu {
             Ok(Some("Add Task")) => add_task_tui(false, &filepath),
             Ok(Some("Add Multiple Tasks")) => add_task_tui(true, &filepath),
