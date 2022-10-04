@@ -6,7 +6,6 @@ use crate::{
 };
 use inquire::{list_option::ListOption, validator::ErrorMessage, Select};
 use inquire::{
-    ui::{IndexPrefix, RenderConfig},
     validator::Validation,
     Editor, MultiSelect, Text,
 };
@@ -23,23 +22,28 @@ pub fn tui(filepath: &Path) {
             "Add Multiple Tasks",
             "Mark as Done",
             "Remove Tasks",
-            "Exit",
         ];
-        let menu = Select::new("Menu", items).prompt();
+        let menu = Select::new("Menu", items)
+            .prompt_skippable();
+        
+        let option = ListOption::new(0, "Add Task");
+
 
         match menu {
-            Ok("Add Task") => add_task_tui(&filepath),
-            Ok("Add Multiple Tasks") => add_mult_task_tui(&filepath),
-            Ok("Mark as Done") => mark_tasks_handler(&filepath),
-            Ok("Remove Tasks") => todo!(),
-            Ok("Exit") => break,
+            Ok(Some("Add Task")) => add_task_tui(false, &filepath),
+            Ok(Some("Add Multiple Tasks")) => add_task_tui(true, &filepath),
+            Ok(Some("Mark as Done")) => mark_tasks_handler(&filepath),
+            Ok(Some("Remove Tasks")) => todo!(),
+            Ok(None) => break,
             _ => eprintln!("Error! Main Menu Selection Failed"),
         }
     }
 }
 
 // Adds Tasks via TUI
-fn add_task_tui(filepath: &Path) {
+fn add_task_tui(multiple: bool, filepath: &Path) {
+    let tasks;
+
     let validator = |input: &str| {
         if input.contains(defaults::SEPARATOR) {
             Ok(Validation::Invalid(ErrorMessage::Custom(format!(
@@ -51,42 +55,28 @@ fn add_task_tui(filepath: &Path) {
         }
     };
 
-    let task = Text::new("Enter task to add: ")
+    if multiple {
+        tasks = Editor::new("Type tasks seperated by lines")
+            .with_validator(validator)
+            .prompt_skippable();
+
+    } else {
+        tasks = Text::new("Enter task to add")
         .with_validator(validator)
-        .prompt();
-
-    match task {
-        Ok(task) => {
-            cli::add_task_handler(vec![task], filepath);
-            println!("{}", prompt::TASK_ADDED);
-        }
-
-        Err(err) => eprintln!("{}: {}", error::ADD_TASK_ERR, err),
+        .prompt_skippable();
     }
-}
-
-// Adds Multiple Tasks via TUI
-fn add_mult_task_tui(filepath: &Path) {
-    let validator = |input: &str| {
-        if input.contains(defaults::SEPARATOR) {
-            Ok(Validation::Invalid(ErrorMessage::Custom(format!(
-                "Cannot use the character \"{}\" in a task",
-                defaults::SEPARATOR
-            ))))
-        } else {
-            Ok(Validation::Valid)
-        }
-    };
-
-    let tasks = Editor::new("Type tasks seperated by lines: ")
-        .with_validator(validator)
-        .prompt();
 
     match tasks {
-        Ok(tasks) => {
-            cli::add_task_handler(tasks.lines().map(|l| l.to_string()).collect(), &filepath)
+        Ok(Some(tasks)) => {
+            if multiple {
+                cli::add_task_handler(tasks.lines().map(|l| l.to_string()).collect(), &filepath)
+            } else {
+                cli::add_task_handler(vec![tasks], filepath);
+            }
+            println!("{}", prompt::TASK_ADDED);
         }
         Err(err) => eprintln!("{}: {}", error::ADD_TASK_ERR, err),
+        Ok(None) => return (),
     }
 }
 
@@ -112,15 +102,13 @@ fn mark_done_tui(tasks: Vec<Task>) {
         Ok(Validation::Valid)
     };
 
-    let render_config = RenderConfig::default().with_option_index_prefix(IndexPrefix::Simple);
-
     let status = MultiSelect::new("Choose a task: ", tasks)
-        .with_render_config(render_config)
         .with_validator(validator)
-        .prompt();
+        .prompt_skippable();
 
     match status {
-        Ok(tasks) => println!("{:?}", tasks),
+        Ok(Some(tasks)) => println!("{:?}", tasks),
         Err(e) => eprintln!("Error in Retrieving Tasks: {e}"),
+        Ok(None) => return (),
     }
 }
