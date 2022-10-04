@@ -23,7 +23,7 @@ pub fn tui(filepath: &Path) {
 
         if tasks.len() == 0 {
             no_tasks = true;
-        } else { 
+        } else {
             no_tasks = false
         }
 
@@ -56,7 +56,7 @@ pub fn tui(filepath: &Path) {
 fn list_tasks_tui(tasks: &[Task]) {
     let mut s = String::with_capacity(1);
     for (i, task) in tasks.iter().enumerate() {
-        println!("{}. {}", i+1, task);
+        println!("{}. {}", i + 1, task);
     }
     println!("Press ENTER To Continue...");
     if let Err(e) = io::stdin().read_line(&mut s) {
@@ -179,4 +179,3 @@ fn tui_rm_handler(tasks: Vec<Task>, filepath: &Path) {
         Ok(None) => return (),
     }
 }
-
