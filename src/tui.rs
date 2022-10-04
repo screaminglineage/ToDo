@@ -16,7 +16,7 @@ pub fn tui(filepath: &Path) {
         let tasks = match todo::get_tasks(&filepath) {
             Ok(tasks) => tasks,
             Err(e) => {
-                cli::handle_not_found_error(e, error::NO_TASKS, error::MARK_TASK_ERR);
+                cli::handle_not_found_error(e, error::TASK_PARSE_ERR_FILE, error::NO_TASKS);
                 return ();
             }
         };
@@ -33,6 +33,7 @@ pub fn tui(filepath: &Path) {
                 "Add Task",
                 "Add Multiple Tasks",
                 "Mark as Done",
+                "Remove all Tasks Marked as Complete",
                 "Remove Tasks",
             ],
             true => vec!["Add Task", "Add Multiple Tasks"],
@@ -46,6 +47,12 @@ pub fn tui(filepath: &Path) {
             Ok(Some("Add Multiple Tasks")) => add_task_tui(true, &filepath),
             Ok(Some("Mark as Done")) => tui_mark_handler(tasks, &filepath),
             Ok(Some("Remove Tasks")) => tui_rm_handler(tasks, &filepath),
+            Ok(Some("Remove all Tasks Marked as Complete")) => {
+                if let Err(e) = tui_remove_marked(&tasks, &filepath) {
+                    cli::handle_not_found_error(e, error::NO_TASKS, error::REM_MARK_TASK_ERR);
+                    return ();
+                } 
+            }
             Ok(None) => break,
             _ => eprintln!("Error! Main Menu Selection Failed"),
         }
@@ -178,4 +185,16 @@ fn tui_rm_handler(tasks: Vec<Task>, filepath: &Path) {
         Err(e) => eprintln!("Error in Retrieving Tasks: {e}"),
         Ok(None) => return (),
     }
+}
+
+// Removes all tasks which have been marked as done through the TUI
+fn tui_remove_marked(tasks: &[Task], filepath: &Path) -> io::Result<()> {
+    let mut file = File::options().write(true).truncate(true).open(&filepath)?;
+
+    for task in tasks {
+        if !task.is_complete() {
+            task.write_to_file(&mut file)?;
+        }
+    }
+    Ok(())
 }
