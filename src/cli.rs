@@ -28,14 +28,14 @@ pub struct Cli {
     pub add: Option<Vec<String>>,
 
     /// Mark a task as complete
-    /// 
+    ///
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to mark multiple tasks at once
     #[clap(long = "mark-done", short = 'x', value_name = "TASK(S)")]
     pub mark: Option<String>,
 
     /// Remove a specific task
-    /// 
+    ///
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to remove multiple tasks at once
     #[clap(long, short, value_name = "TASK(S)")]
@@ -48,7 +48,7 @@ pub struct Cli {
     /// Delete all tasks
     #[clap(long, short = 'D', action, value_parser)]
     pub delete_all: bool,
-    
+
     /// Subcommand
     #[clap(subcommand)]
     pub command: Option<Commands>,

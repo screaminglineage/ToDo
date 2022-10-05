@@ -86,6 +86,8 @@ fn get_filepath() -> Option<Files> {
             temp_path.push(defaults::DEFAULT_TEMP_FILE);
             return Some(Files::new(tasks_path.to_owned(), temp_path));
         }
+
+        // If no environment variable exists then uses the default paths
         Err(_) => {
             let tasks_path = Path::new(defaults::DEFAULT_TASKS_FILE);
             let temp_path = Path::new(defaults::DEFAULT_TEMP_FILE);

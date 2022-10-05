@@ -51,7 +51,7 @@ pub fn tui(filepath: &Path) {
                 if let Err(e) = tui_remove_marked(&tasks, &filepath) {
                     cli::handle_not_found_error(e, error::NO_TASKS, error::REM_MARK_TASK_ERR);
                     return ();
-                } 
+                }
             }
             Ok(None) => break,
             _ => eprintln!("Error! Main Menu Selection Failed"),
