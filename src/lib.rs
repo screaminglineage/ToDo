@@ -1,5 +1,6 @@
 use colored::Colorize;
-use std::fs::{self, File, OpenOptions};
+use std::fmt;
+use std::fs::{self, File};
 use std::io::{self, Write};
 use std::path::Path;
 use std::process;
@@ -8,8 +9,8 @@ mod defaults;
 mod messages;
 use messages::error;
 
-#[derive(PartialEq, Debug)]
-struct Task {
+#[derive(PartialEq, Debug, Clone)]
+pub struct Task {
     description: String,
     is_complete: bool,
 }
@@ -23,16 +24,16 @@ impl Task {
     }
 
     // Create Task from a string separated by a character
-    fn from_string(task: &str) -> Task {
+    pub fn from_string(task: &str) -> Task {
         let mut tasks = task.split(defaults::SEPARATOR);
         let description = match tasks.next() {
             Some(n) => n.to_string(),
-            None => panic!("{}", error::TASK_NAME_PARSE_ERR),
+            None => panic!("{}", error::TASK_PARSE_ERR_NAME),
         };
         let is_complete = match tasks.next() {
             Some("true") => true,
             Some("false") => false,
-            _ => panic!("{}", error::TASK_MARKED_PARSE_ERR),
+            _ => panic!("{}", error::TASK_PARSE_ERR_CMPL),
         };
 
         Task {
@@ -41,27 +42,16 @@ impl Task {
         }
     }
 
-    // Get a checkbox and the Task
-    fn view(&self) -> String {
-        if self.is_complete {
-            format!(
-                "{}{}{} {}",
-                "[".blue(),
-                "x".red().bold(),
-                "]".blue(),
-                self.description.green().bold()
-            )
-        } else {
-            format!("{} {}", "[ ]".blue(), self.description.yellow().bold())
-        }
-    }
-
-    fn set_complete(&mut self) {
+    pub fn mark_complete(&mut self) {
         self.is_complete = true;
     }
 
+    pub fn is_complete(&self) -> bool {
+        self.is_complete
+    }
+
     // Write a Task to file
-    fn write_to_file(&self, file: &mut std::fs::File) -> io::Result<()> {
+    pub fn write_to_file(&self, file: &mut File) -> io::Result<()> {
         writeln!(
             file,
             "{}{}{}",
@@ -70,6 +60,19 @@ impl Task {
             self.is_complete
         )?;
         Ok(())
+    }
+}
+
+// Displays the Task along with a checkbox to denote
+// if it is complete or not. The colour of the Task is also
+// set depending on whether it is complete or not.
+impl fmt::Display for Task {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.is_complete {
+            write!(f, "{}", self.description.green().bold())
+        } else {
+            write!(f, "{}", self.description.yellow().bold())
+        }
     }
 }
 
@@ -85,12 +88,15 @@ pub fn take_input(prompt: &str) -> String {
     input
 }
 
+// Gets all Tasks from a given filepath
+pub fn get_tasks(filepath: &Path) -> io::Result<Vec<Task>> {
+    let contents = fs::read_to_string(filepath)?;
+    Ok(contents.lines().map(|l| Task::from_string(l)).collect())
+}
+
 // Adds a new task to the list
 pub fn add_task(task_name: String, filepath: &Path) -> io::Result<()> {
-    let mut file = OpenOptions::new()
-        .append(true)
-        .create(true)
-        .open(filepath)?;
+    let mut file = File::options().append(true).create(true).open(filepath)?;
 
     let task = Task::new(task_name);
     task.write_to_file(&mut file)?;
@@ -101,11 +107,21 @@ pub fn add_task(task_name: String, filepath: &Path) -> io::Result<()> {
 pub fn display_tasks(filepath: &Path) -> io::Result<()> {
     let tasks_data = fs::read_to_string(filepath)?;
 
-    let mut i: i32 = 1;
-    for line in tasks_data.lines() {
+    if tasks_data.len() == 0 {
+        eprintln!("{}", error::NO_TASKS_DISPL);
+        return Ok(());
+    }
+
+    for (i, line) in tasks_data.lines().enumerate() {
         let task = Task::from_string(line);
-        println!("{}. {}", i.to_string().blue(), task.view());
-        i += 1;
+        print!("{}. ", (i + 1).to_string().blue());
+
+        if task.is_complete() {
+            print!("{}{}{} ", "[".blue(), "x".red().bold(), "]".blue(),);
+        } else {
+            print!("{} ", "[ ]".blue());
+        }
+        println!("{}", task);
     }
     Ok(())
 }
@@ -118,30 +134,27 @@ fn remove_and_rename(original: &Path, temp_file: &Path) -> io::Result<()> {
 }
 
 // Marks a task as done
-pub fn mark_as_done(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
+pub fn mark_done(sel_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
-    let mut temp_file = OpenOptions::new()
-        .write(true)
-        .create(true)
-        .open(temp_path)?;
+    let mut temp_file = File::options().write(true).create(true).open(temp_path)?;
 
     let mut i = 1;
     for line in task_data.lines() {
-        if selected_tasks.contains(&i) {
+        if sel_tasks.contains(&i) {
             let mut task = Task::from_string(line);
-            task.set_complete();
+            task.mark_complete();
             task.write_to_file(&mut temp_file)?;
         } else {
             writeln!(temp_file, "{line}")?;
         }
         i += 1
     }
-    remove_and_rename(&filepath, temp_path)?;
+    remove_and_rename(filepath, temp_path)?;
     Ok(())
 }
 
-// Removes a specific task
-pub fn remove_task(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
+// Removes specific tasks
+pub fn remove_tasks(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
     let task_data = fs::read_to_string(&filepath)?;
     let mut temp_file = File::create(temp_path)?;
 
@@ -152,7 +165,7 @@ pub fn remove_task(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) 
         }
         i += 1
     }
-    remove_and_rename(&filepath, temp_path)?;
+    remove_and_rename(filepath, temp_path)?;
     Ok(())
 }
 
@@ -167,7 +180,7 @@ pub fn remove_marked(filepath: &Path, temp_path: &Path) -> io::Result<()> {
             writeln!(temp_file, "{line}")?;
         }
     }
-    remove_and_rename(&filepath, temp_path)?;
+    remove_and_rename(filepath, temp_path)?;
     Ok(())
 }
 
@@ -214,12 +227,10 @@ mod tests {
     use super::*;
     #[test]
     fn task_from_string() {
+        let task = Task::from_string("Theres another one`false".into());
         assert_eq!(
-            Task::from_string("Theres another one`false".into()),
-            Task {
-                description: "Theres another one".into(),
-                is_complete: false
-            }
+            format!("{}", task),
+            format!("{} {}", "[ ]".blue(), task.description.yellow().bold())
         );
     }
 

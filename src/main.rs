@@ -3,12 +3,14 @@ use std::env;
 use std::path::{Path, PathBuf};
 use std::process;
 
-mod cli_hndlr;
+mod cli;
 mod defaults;
 mod messages;
+mod tui;
 
 use messages::{error, prompt};
 
+// Stores the filepaths required for storing tasks
 struct Files {
     tasks_path: PathBuf,
     temp_path: PathBuf,
@@ -35,40 +37,45 @@ fn main() {
         process::exit(1);
     }
 
-    let cli = cli_hndlr::Cli::parse();
+    let cli = cli::Cli::parse();
 
-    //Adding a task
+    // Adding a task
     if let Some(tasks) = cli.add {
-        cli_hndlr::add_task_handler(tasks, &filepath);
+        cli::add_task_handler(tasks, &filepath);
         println!("{}", prompt::TASK_ADDED);
-        process::exit(0);
+        return ();
     }
 
     // Marking specific tasks as done
     if let Some(pattern) = cli.mark {
-        cli_hndlr::mark_task_handler(pattern, &filepath, &temp_path);
+        cli::mark_task_handler(pattern, &filepath, &temp_path);
     }
 
     // Removing specific tasks
     if let Some(pattern) = cli.remove {
-        cli_hndlr::remove_task_handler(pattern, &filepath, &temp_path);
+        cli::remove_task_handler(pattern, &filepath, &temp_path);
     }
 
     // Removing all marked Tasks
     if cli.remove_marked {
-        cli_hndlr::remove_marked_handler(&filepath, &temp_path);
+        cli::remove_marked_handler(&filepath, &temp_path);
         println!("{}", prompt::DEL_MARKED);
-        process::exit(0);
+        return ();
     }
 
     // Deleting all saved tasks
-    if cli.delete {
-        cli_hndlr::delete_all_handler(&filepath);
-        process::exit(0);
+    if cli.delete_all {
+        cli::delete_all_handler(&filepath);
+        return ();
     }
 
-    // Listing all saved tasks
-    cli_hndlr::list_task_handler(&filepath);
+    // Checking for Subcommands and
+    // listing all saved tasks if none found
+    if let Some(cli::Commands::Tui { .. }) = cli.command {
+        tui::tui(&filepath);
+    } else {
+        cli::list_task_handler(&filepath);
+    }
 }
 
 // Tries to gets filepaths from environment variable and converts them to Path
@@ -80,6 +87,8 @@ fn get_filepath() -> Option<Files> {
             temp_path.push(defaults::DEFAULT_TEMP_FILE);
             return Some(Files::new(tasks_path.to_owned(), temp_path));
         }
+
+        // If no environment variable exists then uses the default paths
         Err(_) => {
             let tasks_path = Path::new(defaults::DEFAULT_TASKS_FILE);
             let temp_path = Path::new(defaults::DEFAULT_TEMP_FILE);

@@ -1,6 +1,6 @@
 // Handles the CLI parser, calls the required functions and also handles any errors
 
-use clap::{ArgGroup, Parser};
+use clap::{ArgGroup, Parser, Subcommand};
 use std::io;
 use std::path::Path;
 use std::process;
@@ -13,7 +13,7 @@ use todo;
 #[clap(about = "Add tasks to a TODO list and then mark them done or remove when required")]
 #[clap(group(
     ArgGroup::new("group")
-        .args(&["add", "mark", "remove", "remove-marked", "delete"])
+        .args(&["add", "mark", "remove", "remove_marked", "delete_all"])
     ))]
 pub struct Cli {
     /// Add new tasks separated by commas (without any spaces in between)
@@ -27,13 +27,15 @@ pub struct Cli {
     )]
     pub add: Option<Vec<String>>,
 
-    /// Mark a task as complete.
+    /// Mark a task as complete
+    ///
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to mark multiple tasks at once
     #[clap(long = "mark-done", short = 'x', value_name = "TASK(S)")]
     pub mark: Option<String>,
 
-    /// Remove a specific task.
+    /// Remove a specific task
+    ///
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to remove multiple tasks at once
     #[clap(long, short, value_name = "TASK(S)")]
@@ -44,25 +46,38 @@ pub struct Cli {
     pub remove_marked: bool,
 
     /// Delete all tasks
-    #[clap(long, short, action, value_parser)]
-    pub delete: bool,
+    #[clap(long, short = 'D', action, value_parser)]
+    pub delete_all: bool,
+
+    /// Subcommand
+    #[clap(subcommand)]
+    pub command: Option<Commands>,
+}
+
+#[derive(Subcommand)]
+pub enum Commands {
+    /// Launch ToDo in TUI mode
+    Tui {
+        #[clap(action)]
+        tui: Option<bool>,
+    },
 }
 
 // Handling Errors
 
 // Handles IO Error
-fn handle_io_error(error: io::Error, desc: &str) {
+pub fn handle_io_error(error: io::Error, desc: &str) {
     eprintln!("{desc} - {error}");
     process::exit(1);
 }
 
 // Handles FileNotFound Error
-fn handle_not_found_error(error: io::Error, desc_1: &str, desc_2: &str) {
+pub fn handle_not_found_error(error: io::Error, cause_desc: &str, result_desc: &str) {
     if error.kind() == io::ErrorKind::NotFound {
-        eprintln!("{}", desc_1);
+        eprintln!("{}", cause_desc);
         process::exit(1);
     } else {
-        handle_io_error(error, desc_2);
+        handle_io_error(error, result_desc);
     }
 }
 
@@ -80,7 +95,7 @@ pub fn add_task_handler(tasks: Vec<String>, filepath: &Path) {
 // Marks specific task(s) and handles errors
 pub fn mark_task_handler(pattern: String, filepath: &Path, temp_path: &Path) {
     let nums = todo::parse_pattern(pattern);
-    if let Err(e) = todo::mark_as_done(nums, filepath, temp_path) {
+    if let Err(e) = todo::mark_done(nums, filepath, temp_path) {
         handle_not_found_error(e, error::NO_TASKS, error::MARK_TASK_ERR);
     }
 }
@@ -88,7 +103,7 @@ pub fn mark_task_handler(pattern: String, filepath: &Path, temp_path: &Path) {
 // Removes specific task(s) and handles errors
 pub fn remove_task_handler(pattern: String, filepath: &Path, temp_path: &Path) {
     let nums = todo::parse_pattern(pattern);
-    if let Err(e) = todo::remove_task(nums, filepath, temp_path) {
+    if let Err(e) = todo::remove_tasks(nums, filepath, temp_path) {
         handle_not_found_error(e, error::NO_TASKS, error::REM_TASK_ERR);
     }
 }
