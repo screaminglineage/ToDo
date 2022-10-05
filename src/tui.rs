@@ -21,6 +21,9 @@ pub fn tui(filepath: &Path) {
             }
         };
 
+        // If no tasks are saved in file then
+        // doesnt display the option to view or
+        // edit them
         if tasks.len() == 0 {
             no_tasks = true;
         } else {
@@ -41,6 +44,7 @@ pub fn tui(filepath: &Path) {
 
         let menu = Select::new("Menu", items).prompt_skippable();
 
+        // Handles menu options
         match menu {
             Ok(Some("List all Tasks")) => list_tasks_tui(&tasks),
             Ok(Some("Add Task")) => add_task_tui(false, &filepath),
@@ -75,6 +79,7 @@ fn list_tasks_tui(tasks: &[Task]) {
 fn add_task_tui(multiple: bool, filepath: &Path) {
     let status;
 
+    // Checks if added task doesnt contain the separator character
     let validator = |input: &str| {
         if input.contains(defaults::SEPARATOR) {
             Ok(Validation::Invalid(ErrorMessage::Custom(format!(
@@ -87,7 +92,7 @@ fn add_task_tui(multiple: bool, filepath: &Path) {
     };
 
     // Uses the Text option of inquire for single task addition
-    // and the Editor option of inquire (uses the default text editor)
+    // and the Editor option of inquire (opens the default text editor)
     // for multiple task addition
     if multiple {
         status = Editor::new("Type tasks seperated by lines")
@@ -141,6 +146,7 @@ fn tui_remove_tasks(tasks: Vec<Task>, to_remove: Vec<Task>, filepath: &Path) -> 
 
 // TUI Handler to mark tasks as complete
 fn tui_mark_handler(tasks: Vec<Task>, filepath: &Path) {
+    // Checks if selected task is already marked as complete
     let validator = |input: &[ListOption<&Task>]| {
         for opt in input {
             let task = opt.value;

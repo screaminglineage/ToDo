@@ -10,6 +10,7 @@ mod tui;
 
 use messages::{error, prompt};
 
+// Stores the filepaths required for storing tasks
 struct Files {
     tasks_path: PathBuf,
     temp_path: PathBuf,
