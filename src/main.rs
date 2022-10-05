@@ -63,7 +63,7 @@ fn main() {
     }
 
     // Deleting all saved tasks
-    if cli.delete {
+    if cli.delete_all {
         cli::delete_all_handler(&filepath);
         return ();
     }

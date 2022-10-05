@@ -13,7 +13,7 @@ use todo;
 #[clap(about = "Add tasks to a TODO list and then mark them done or remove when required")]
 #[clap(group(
     ArgGroup::new("group")
-        .args(&["add", "mark", "remove", "remove-marked", "delete"])
+        .args(&["add", "mark", "remove", "remove_marked", "delete_all"])
     ))]
 pub struct Cli {
     /// Add new tasks separated by commas (without any spaces in between)
@@ -27,13 +27,15 @@ pub struct Cli {
     )]
     pub add: Option<Vec<String>>,
 
-    /// Mark a task as complete.
+    /// Mark a task as complete
+    /// 
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to mark multiple tasks at once
     #[clap(long = "mark-done", short = 'x', value_name = "TASK(S)")]
     pub mark: Option<String>,
 
-    /// Remove a specific task.
+    /// Remove a specific task
+    /// 
     /// A pattern like 1-5,8,10-12 (without spaces)
     /// can also be used to remove multiple tasks at once
     #[clap(long, short, value_name = "TASK(S)")]
@@ -44,8 +46,9 @@ pub struct Cli {
     pub remove_marked: bool,
 
     /// Delete all tasks
-    #[clap(long, short, action, value_parser)]
-    pub delete: bool,
+    #[clap(long, short = 'D', action, value_parser)]
+    pub delete_all: bool,
+    
     /// Subcommand
     #[clap(subcommand)]
     pub command: Option<Commands>,
@@ -53,7 +56,7 @@ pub struct Cli {
 
 #[derive(Subcommand)]
 pub enum Commands {
-    /// Launches ToDo in TUI mode
+    /// Launch ToDo in TUI mode
     Tui {
         #[clap(action)]
         tui: Option<bool>,
