@@ -12,7 +12,7 @@ A simple command line TODO utility
 
 ## Introduction
 ToDo is a simple CLI based TODO utility which lets you add tasks to a list, mark them done in bulk and remove them from the list entirely.
-Also has a simple TUI launched using the `tui` subcommand
+Also has a basic TUI which can be launched using the `tui` subcommand
 
 ## Changing the Task Data Location
 The task data is saved in a file called **todo_tasks.txt** (in the current working directory) by default. However an environment variable, **RTODO_FILE_PATH**, can be set to any desired value to specify a custom path for saving the task data. 
