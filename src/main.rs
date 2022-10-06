@@ -83,6 +83,10 @@ fn get_filepath() -> Option<Files> {
     match env::var(defaults::FILEPATH_ENV_VAR) {
         Ok(f) => {
             let tasks_path = Path::new(&f);
+            if tasks_path.is_dir() {
+                return None;
+            }
+
             let mut temp_path = tasks_path.parent()?.to_owned();
             temp_path.push(defaults::DEFAULT_TEMP_FILE);
             return Some(Files::new(tasks_path.to_owned(), temp_path));

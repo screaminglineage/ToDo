@@ -17,6 +17,10 @@ use todo;
     ))]
 pub struct Cli {
     /// Add new tasks separated by commas (without any spaces in between)
+    /// 
+    /// Multiple tasks can be added by being separated by commas,
+    /// in the format "Task 1","Task 2","Task 3".
+    /// Note that there are no spaces in between each task
     #[clap(
         long,
         short,
