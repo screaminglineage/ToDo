@@ -47,7 +47,7 @@ Options:
  
  ### Examples
   - `todo tui` - Launches ToDo in TUI (Terminal User Interface) mode  
-  - `todo a "Task 1","Task 2","Task 3"` - Adds **Task 1**, **Task 2**, and **Task 3** to the list. (Tasks must be enclosed within quotes if they include spaces. There also shouldnt be any spaces after each comma between the tasks.)
+  - `todo a "Task 1" "Task 2" "Task 3"` - Adds **Task 1**, **Task 2**, and **Task 3** to the list. (Tasks must be enclosed within quotes if they include spaces)
   - `todo -x 1-5,14,7,10-12` - Mark tasks **1 to 5**, **7**, **10 to 12**, and **14** as done in the list (Note that theres no space after the commas in the command)
   - `todo -u 1-5,14,7,10-12` - Unmark previously marked complete tasks **1 to 5**, **7**, **10 to 12**, and **14** (Note that theres no space after the commas in the command)
   - `todo -r 1-3,8,10` - Remove tasks **1 to 3**, **8**, and **10** from the list (Same pattern as for marking tasks done)
