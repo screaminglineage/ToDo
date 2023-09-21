@@ -1,103 +1,45 @@
-use clap::Parser;
-use std::env;
-use std::path::{Path, PathBuf};
-use std::process;
+use std::{
+    env, error,
+    fs::{self, File},
+    io::ErrorKind,
+};
 
+use todo::Task;
 mod cli;
-mod defaults;
-mod messages;
-mod tui;
 
-use messages::{error, prompt};
+pub const FILEPATH_ENV_VAR: &str = "RTODO_FILE_PATH";
+pub const DEFAULT_TASKS_FILE: &str = "todo_tasks.json";
 
-// Stores the filepaths required for storing tasks
-struct Files {
-    tasks_path: PathBuf,
-    temp_path: PathBuf,
-}
+fn main() -> Result<(), Box<dyn error::Error>> {
+    let file_path = match env::var(FILEPATH_ENV_VAR) {
+        Ok(path) => path,
+        Err(_) => DEFAULT_TASKS_FILE.to_string(),
+    };
 
-impl Files {
-    fn new(tasks_path: PathBuf, temp_path: PathBuf) -> Files {
-        Files {
-            tasks_path,
-            temp_path,
-        }
-    }
-}
+    // Tries to read the JSON file and returns an empty Vec as string if not found
+    let json_data = match fs::read_to_string(&file_path) {
+        Ok(data) => data,
+        Err(e) if e.kind() == ErrorKind::NotFound => "[]".to_string(),
+        Err(e) => return Err(Box::new(e)),
+    };
 
-fn main() {
-    let filepath: PathBuf;
-    let temp_path: PathBuf;
-    // Getting filepath from environment variable
-    if let Some(files) = get_filepath() {
-        filepath = files.tasks_path;
-        temp_path = files.temp_path;
-    } else {
-        eprintln!("{}", error::ENV_VAR_ERR);
-        process::exit(1);
-    }
-
-    let cli = cli::Cli::parse();
-
-    // Adding a task
-    if let Some(tasks) = cli.add {
-        cli::add_task_handler(tasks, &filepath);
-        println!("{}", prompt::TASK_ADDED);
-        return ();
-    }
-
-    // Marking specific tasks as done
-    if let Some(pattern) = cli.mark {
-        cli::mark_task_handler(pattern, &filepath, &temp_path);
-    }
-
-    // Removing specific tasks
-    if let Some(pattern) = cli.remove {
-        cli::remove_task_handler(pattern, &filepath, &temp_path);
-    }
-
-    // Removing all marked Tasks
-    if cli.remove_marked {
-        cli::remove_marked_handler(&filepath, &temp_path);
-        println!("{}", prompt::DEL_MARKED);
-        return ();
-    }
-
-    // Deleting all saved tasks
-    if cli.delete_all {
-        cli::delete_all_handler(&filepath);
-        return ();
-    }
-
-    // Checking for Subcommands and
-    // listing all saved tasks if none found
-    if let Some(cli::Commands::Tui { .. }) = cli.command {
-        tui::tui(&filepath);
-    } else {
-        cli::list_task_handler(&filepath);
-    }
-}
-
-// Tries to gets filepaths from environment variable and converts them to Path
-fn get_filepath() -> Option<Files> {
-    match env::var(defaults::FILEPATH_ENV_VAR) {
-        Ok(f) => {
-            let tasks_path = Path::new(&f);
-            if tasks_path.is_dir() {
-                return None;
+    // Tries to deserialize the JSON data into a Vec of tasks and displays errors if any
+    let mut tasks: Vec<Task> = match serde_json::from_str(&json_data) {
+        Ok(t) => t,
+        Err(e) => {
+            if e.is_syntax() {
+                eprintln!("Error: invalid JSON in file - '{file_path}'\nReason: {e}");
+                return Ok(());
             }
-
-            let mut temp_path = tasks_path.parent()?.to_owned();
-            temp_path.push(defaults::DEFAULT_TEMP_FILE);
-            return Some(Files::new(tasks_path.to_owned(), temp_path));
+            return Err(Box::new(e));
         }
+    };
 
-        // If no environment variable exists then uses the default paths
-        Err(_) => {
-            let tasks_path = Path::new(defaults::DEFAULT_TASKS_FILE);
-            let temp_path = Path::new(defaults::DEFAULT_TEMP_FILE);
-            let files = Files::new(tasks_path.to_owned(), temp_path.to_owned());
-            Some(files)
-        }
+    if let Err(todo::Error::ParsePatternError) = cli::cli_run(&mut tasks) {
+        eprintln!("{}", todo::messages::PATTERN_PARSE_ERR);
     }
+
+    let file = File::create(file_path)?;
+    serde_json::to_writer(file, &tasks)?;
+    Ok(())
 }

@@ -9,5 +9,4 @@
 *.txt
 *.bak
 
-# VSCode config files 
-/.vscode/
+

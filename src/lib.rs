@@ -1,249 +1,293 @@
 use colored::Colorize;
-use std::fmt;
-use std::fs::{self, File};
+use core::fmt;
+use serde::{Deserialize, Serialize};
 use std::io::{self, Write};
-use std::path::Path;
-use std::process;
+use std::ops::Range;
 
-mod defaults;
-mod messages;
-use messages::error;
+pub mod messages;
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct Task {
-    description: String,
-    is_complete: bool,
+    text: String,
+    status: TaskStatus,
 }
 
 impl Task {
-    fn new(name: String) -> Task {
-        Task {
-            description: name,
-            is_complete: false,
+    pub fn new(task: &str) -> Self {
+        Self {
+            text: task.to_string(),
+            status: TaskStatus::Incomplete,
         }
     }
 
-    // Create Task from a string separated by a character
-    pub fn from_string(task: &str) -> Task {
-        let mut tasks = task.split(defaults::SEPARATOR);
-        let description = match tasks.next() {
-            Some(n) => n.to_string(),
-            None => panic!("{}", error::TASK_PARSE_ERR_NAME),
-        };
-        let is_complete = match tasks.next() {
-            Some("true") => true,
-            Some("false") => false,
-            _ => panic!("{}", error::TASK_PARSE_ERR_CMPL),
-        };
-
-        Task {
-            description,
-            is_complete,
-        }
-    }
-
-    pub fn mark_complete(&mut self) {
-        self.is_complete = true;
+    pub fn set_status(&mut self, status: TaskStatus) {
+        self.status = status;
     }
 
     pub fn is_complete(&self) -> bool {
-        self.is_complete
-    }
-
-    // Write a Task to file
-    pub fn write_to_file(&self, file: &mut File) -> io::Result<()> {
-        writeln!(
-            file,
-            "{}{}{}",
-            self.description,
-            defaults::SEPARATOR,
-            self.is_complete
-        )?;
-        Ok(())
+        self.status == TaskStatus::Complete
     }
 }
 
-// Displays the Task along with a checkbox to denote
-// if it is complete or not. The colour of the Task is also
-// set depending on whether it is complete or not.
 impl fmt::Display for Task {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        if self.is_complete {
-            write!(f, "{}", self.description.green().bold())
+        if self.is_complete() {
+            write!(
+                f,
+                "{}{}{} {}",
+                "[".bold(),
+                "x".red().bold(),
+                "]".bold(),
+                self.text.green().bold()
+            )
         } else {
-            write!(f, "{}", self.description.yellow().bold())
+            write!(f, "{} {}", "[ ]".bold(), self.text.yellow().bold())
         }
     }
 }
 
-// TODO: Change this to return a result and handle both the error cases in main.rs
-// Displays a prompt to the user and returns their input
-pub fn take_input(prompt: &str) -> String {
-    let mut input = String::new();
-    print!("{}", prompt);
-    io::stdout().flush().expect("Failed to flush buffer");
-    io::stdin()
-        .read_line(&mut input)
-        .expect("Failed to read input");
-    input
+#[derive(Debug, Copy, Clone, Serialize, Deserialize, PartialEq)]
+pub enum TaskStatus {
+    Incomplete,
+    Complete,
 }
 
-// Gets all Tasks from a given filepath
-pub fn get_tasks(filepath: &Path) -> io::Result<Vec<Task>> {
-    let contents = fs::read_to_string(filepath)?;
-    Ok(contents.lines().map(|l| Task::from_string(l)).collect())
+#[derive(Debug, PartialEq)]
+pub enum Error {
+    ParsePatternError,
 }
 
-// Adds a new task to the list
-pub fn add_task(task_name: String, filepath: &Path) -> io::Result<()> {
-    let mut file = File::options().append(true).create(true).open(filepath)?;
+// Removes all invalid indexes from the Range and converts it into a vector of 0-indexed indexes
+fn validate_range(ranges: Vec<Range<u32>>, tasks: &Vec<Task>) -> Vec<u32> {
+    ranges
+        .into_iter()
+        .filter(|range| {
+            (range.start as usize) <= tasks.len() && ((range.end as usize) - 1) <= tasks.len()
+        })
+        .flat_map(|range| (range.start - 1)..(range.end - 1))
+        .collect()
+}
 
-    let task = Task::new(task_name);
-    task.write_to_file(&mut file)?;
-    Ok(())
+pub fn add_task(tasks: &mut Vec<Task>, text: &str) {
+    tasks.push(Task::new(text));
+}
+
+// Changes the status of specific tasks
+pub fn change_task_status(
+    tasks: &mut Vec<Task>,
+    ranges_to_mark: Vec<Range<u32>>,
+    new_status: TaskStatus,
+) {
+    let indexes = validate_range(ranges_to_mark, tasks);
+
+    for index in indexes {
+        if let Some(t) = tasks.get_mut(index as usize) {
+            t.set_status(new_status);
+        }
+    }
+}
+
+// Removes tasks based on the provided range
+pub fn remove_tasks(tasks: &mut Vec<Task>, ranges_to_remove: Vec<Range<u32>>) {
+    let mut indexes = validate_range(ranges_to_remove, tasks);
+    indexes.sort_by(|a, b| b.cmp(a));
+
+    for index in indexes {
+        tasks.remove(index as usize);
+    }
+}
+
+// Removes all tasks marked complete
+pub fn remove_completed_tasks(tasks: &mut Vec<Task>) {
+    tasks.retain(|task| !task.is_complete());
+}
+
+// Removes all tasks
+pub fn remove_all(tasks: &mut Vec<Task>) {
+    tasks.clear();
 }
 
 // Displays a list of all tasks
-pub fn display_tasks(filepath: &Path) -> io::Result<()> {
-    let tasks_data = fs::read_to_string(filepath)?;
-
-    if tasks_data.len() == 0 {
-        eprintln!("{}", error::NO_TASKS_DISPL);
-        return Ok(());
+pub fn display_tasks(tasks: &Vec<Task>) {
+    if tasks.is_empty() {
+        println!("{}", messages::NO_TASKS_TO_DISPLAY);
     }
-
-    for (i, line) in tasks_data.lines().enumerate() {
-        let task = Task::from_string(line);
-        print!("{}. ", (i + 1).to_string().blue());
-
-        if task.is_complete() {
-            print!("{}{}{} ", "[".blue(), "x".red().bold(), "]".blue(),);
-        } else {
-            print!("{} ", "[ ]".blue());
-        }
-        println!("{}", task);
+    for (i, task) in tasks.iter().enumerate() {
+        println!("{}. {}", format!("{}", i + 1).bold(), task);
     }
-    Ok(())
 }
 
-// Deletes a file and renames another temporary file to the former
-fn remove_and_rename(original: &Path, temp_file: &Path) -> io::Result<()> {
-    fs::remove_file(&original)?;
-    fs::rename(temp_file, &original)?;
-    Ok(())
+// Displays a prompt to the user and returns their input
+pub fn take_input(prompt: &str) -> io::Result<String> {
+    let mut input = String::new();
+    print!("{}", prompt);
+    io::stdout().flush()?;
+    io::stdin().read_line(&mut input)?;
+    Ok(input)
 }
 
-// Marks a task as done
-pub fn mark_done(sel_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
-    let task_data = fs::read_to_string(&filepath)?;
-    let mut temp_file = File::options().write(true).create(true).open(temp_path)?;
-
-    let mut i = 1;
-    for line in task_data.lines() {
-        if sel_tasks.contains(&i) {
-            let mut task = Task::from_string(line);
-            task.mark_complete();
-            task.write_to_file(&mut temp_file)?;
-        } else {
-            writeln!(temp_file, "{line}")?;
-        }
-        i += 1
-    }
-    remove_and_rename(filepath, temp_path)?;
-    Ok(())
-}
-
-// Removes specific tasks
-pub fn remove_tasks(selected_tasks: Vec<u32>, filepath: &Path, temp_path: &Path) -> io::Result<()> {
-    let task_data = fs::read_to_string(&filepath)?;
-    let mut temp_file = File::create(temp_path)?;
-
-    let mut i = 1;
-    for line in task_data.lines() {
-        if !selected_tasks.contains(&i) {
-            writeln!(temp_file, "{line}")?;
-        }
-        i += 1
-    }
-    remove_and_rename(filepath, temp_path)?;
-    Ok(())
-}
-
-// Removes all tasks marked as done
-pub fn remove_marked(filepath: &Path, temp_path: &Path) -> io::Result<()> {
-    let task_data = fs::read_to_string(&filepath)?;
-    let mut temp_file = File::create(temp_path)?;
-
-    for line in task_data.lines() {
-        let task = Task::from_string(line);
-        if !task.is_complete {
-            writeln!(temp_file, "{line}")?;
-        }
-    }
-    remove_and_rename(filepath, temp_path)?;
-    Ok(())
-}
-
-// Deletes all tasks from list
-pub fn remove_all(filepath: &Path) -> io::Result<()> {
-    fs::remove_file(filepath)?;
-    Ok(())
-}
-
-// Parses a user entered pattern like "1-6,13,7-9" into [1,2,3,4,5,6,13,7,8,9]
-pub fn parse_pattern(pattern: String) -> Vec<u32> {
+// Parses a user entered pattern like "1-6,13,7-9" into a Vec of Ranges
+pub fn parse_pattern(pattern: &str) -> Result<Vec<Range<u32>>, Error> {
     let mut tasks = Vec::new();
-    for num in pattern.split(",") {
-        let mut n = num.split("-").map(|s| s.parse::<u32>());
 
-        let lower: u32;
-        let upper: u32;
+    for nums in pattern.split(',') {
+        let mut nums_it = nums.split('-').map(|s| s.parse::<u32>());
 
-        match n.next() {
-            Some(Ok(num)) => lower = num,
-            _ => {
-                eprintln!("{}", error::PATTERN_PARSE_ERR);
-                process::exit(1);
-            }
+        let start = match nums_it.next() {
+            Some(Ok(num)) => num,
+            _ => return Err(Error::ParsePatternError),
         };
 
-        match n.next() {
-            Some(Ok(num)) => upper = num,
-            None => upper = lower,
-            Some(Err(_)) => {
-                eprintln!("{}", error::PATTERN_PARSE_ERR);
-                process::exit(1);
-            }
+        let end = match nums_it.next() {
+            Some(Ok(num)) => num,
+            None => start,
+            Some(Err(_)) => return Err(Error::ParsePatternError),
         };
-        for i in lower..upper + 1 {
-            tasks.push(i);
-        }
+
+        tasks.push(Range {
+            start,
+            end: end + 1,
+        })
     }
-    tasks
+    Ok(tasks)
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    #[test]
-    fn task_from_string() {
-        let task = Task::from_string("Theres another one`false".into());
-        assert_eq!(
-            format!("{}", task),
-            format!("{} {}", "[ ]".blue(), task.description.yellow().bold())
-        );
+
+    fn setup_stuff() -> Vec<Task> {
+        vec![
+            Task::new("Task 1"),
+            Task::new("Task 2"),
+            Task::new("Task 3"),
+            Task::new("Task 4"),
+        ]
     }
 
     #[test]
     fn pattern_parser_simple() {
-        assert_eq!(parse_pattern("1,5,7".into()), [1, 5, 7]);
+        assert_eq!(parse_pattern("1,5,7"), Ok(vec![1..2, 5..6, 7..8]));
     }
 
     #[test]
     fn pattern_parser_complex() {
         assert_eq!(
-            parse_pattern("1-6,13-17,7-9,14".into()),
-            [1, 2, 3, 4, 5, 6, 13, 14, 15, 16, 17, 7, 8, 9, 14]
+            parse_pattern("1-6,13-17,7-9,14"),
+            Ok(vec![1..7, 13..18, 7..10, 14..15])
+        );
+    }
+
+    #[test]
+    fn pattern_parser_secondary_missing() {
+        assert_eq!(parse_pattern("1-"), Err(Error::ParsePatternError));
+    }
+
+    #[test]
+    fn removing_completed_tasks() {
+        let mut tasks = setup_stuff();
+        tasks[0].set_status(TaskStatus::Complete);
+        tasks[1].set_status(TaskStatus::Complete);
+        remove_completed_tasks(&mut tasks);
+
+        assert_eq!(
+            tasks,
+            vec![
+                Task {
+                    text: "Task 3".into(),
+                    status: TaskStatus::Incomplete
+                },
+                Task {
+                    text: "Task 4".into(),
+                    status: TaskStatus::Incomplete
+                },
+            ]
+        )
+    }
+
+    #[test]
+    fn removing_selected_tasks() {
+        let mut tasks = setup_stuff();
+        let marked = parse_pattern("1-2,4").unwrap();
+        remove_tasks(&mut tasks, marked);
+        assert_eq!(
+            tasks,
+            vec![Task {
+                text: "Task 3".into(),
+                status: TaskStatus::Incomplete
+            }]
+        );
+    }
+
+    #[test]
+    fn validating_range() {
+        let tasks = setup_stuff();
+        let marked = parse_pattern("1-5,1-3,5-10").unwrap();
+        assert_eq!(validate_range(marked, &tasks), vec![0, 1, 2])
+    }
+
+    #[test]
+    fn marking_selected_tasks() {
+        let mut tasks = setup_stuff();
+        let marked = parse_pattern("1-2,4,9-9999").unwrap();
+        change_task_status(&mut tasks, marked, TaskStatus::Complete);
+        assert_eq!(
+            tasks,
+            vec![
+                Task {
+                    text: "Task 1".into(),
+                    status: TaskStatus::Complete
+                },
+                Task {
+                    text: "Task 2".into(),
+                    status: TaskStatus::Complete
+                },
+                Task {
+                    text: "Task 3".into(),
+                    status: TaskStatus::Incomplete
+                },
+                Task {
+                    text: "Task 4".into(),
+                    status: TaskStatus::Complete
+                },
+            ]
+        );
+    }
+    #[test]
+    fn removing_all() {
+        let mut tasks = setup_stuff();
+        remove_all(&mut tasks);
+        assert!(tasks.is_empty());
+    }
+
+    #[test]
+    fn adding_new_task() {
+        let mut tasks = setup_stuff();
+        add_task(&mut tasks, "This is a New Task!");
+        assert_eq!(
+            tasks,
+            vec![
+                Task {
+                    text: "Task 1".into(),
+                    status: TaskStatus::Incomplete
+                },
+                Task {
+                    text: "Task 2".into(),
+                    status: TaskStatus::Incomplete
+                },
+                Task {
+                    text: "Task 3".into(),
+                    status: TaskStatus::Incomplete
+                },
+                Task {
+                    text: "Task 4".into(),
+                    status: TaskStatus::Incomplete
+                },
+                Task {
+                    text: "This is a New Task!".into(),
+                    status: TaskStatus::Incomplete
+                },
+            ]
         );
     }
 }
