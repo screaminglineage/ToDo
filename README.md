@@ -26,12 +26,12 @@ Add tasks to a TODO list and then mark them done or remove when required
 Usage: todo [OPTIONS] [COMMAND]
 
 Commands:
-  tui   Launch ToDo in TUI mode
+  add   Add new items [aliases: a]
   help  Print this message or the help of the given subcommand(s)
 
 Options:
-  -a, --add <NEW-TASK(S)>    Add new tasks separated by commas (without any spaces in between)
   -x, --mark-done <TASK(S)>  Mark a task as complete
+  -u, --unmark <TASK(S)>     Unmark a completed task back to incomplete
   -r, --remove <TASK(S)>     Remove a specific task
   -R, --remove-marked        Remove all tasks which have been marked as complete
   -D, --delete-all           Delete all tasks
@@ -40,16 +40,17 @@ Options:
 ```
 
 ### Options
- - `-a`, `--add` - Add a new tasks to the list (Multiple tasks can be added as comma separated values)
- - `-x`, `--mark-done` - Mark specific tasks as done by specifying them separated by commas (A '**-**' can be used to denote ranges)
- - `-r`, `--remove` - Delete a specific tasks by specifying them (same pattern as for marking them as done)
- - `-R`, `--remove-marked` - Delete all the tasks which have been marked complete
- - `-D`, `--delete-all` - Delete all saved tasks
+ - `-x`, `--mark-done`          Mark specific tasks as done by specifying them separated by commas (A '**-**' can be used to denote ranges)
+ - `-u`, `--unmark`             Unmark a completed task back to incomplete
+ - `-r`, `--remove`             Delete a specific tasks by specifying them (same pattern as for marking them as done)
+ - `-R`, `--remove-marked`      Delete all the tasks which have been marked complete
+ - `-D`, `--delete-all`         Delete all saved tasks
  
  ### Examples
   - `todo tui` - Launches ToDo in TUI (Terminal User Interface) mode  
-  - `todo -a "Task 1","Task 2","Task 3"` - Adds **Task 1**, **Task 2**, and **Task 3** to the list. (Tasks must be enclosed within quotes if they include spaces. There also shouldnt be any spaces after each comma between the tasks.)
+  - `todo a "Task 1","Task 2","Task 3"` - Adds **Task 1**, **Task 2**, and **Task 3** to the list. (Tasks must be enclosed within quotes if they include spaces. There also shouldnt be any spaces after each comma between the tasks.)
   - `todo -x 1-5,14,7,10-12` - Mark tasks **1 to 5**, **7**, **10 to 12**, and **14** as done in the list (Note that theres no space after the commas in the command)
+  - `todo -u 1-5,14,7,10-12` - Unmark previously marked complete tasks **1 to 5**, **7**, **10 to 12**, and **14** (Note that theres no space after the commas in the command)
   - `todo -r 1-3,8,10` - Remove tasks **1 to 3**, **8**, and **10** from the list (Same pattern as for marking tasks done)
   - `todo -R` - Remove all tasks in the list which have been marked as done
   - `todo -D` - Delete all saved tasks (Gives a secondary warning to prevent accidental deletion)
